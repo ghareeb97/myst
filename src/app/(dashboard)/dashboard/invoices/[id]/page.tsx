@@ -1,10 +1,17 @@
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
-import { canEditInvoicePayments, canVoidInvoices } from "@/lib/authz";
+import {
+  canEditInvoicePayments,
+  canVoidInvoices,
+  canDeleteInvoices,
+  canEditInvoiceInfo
+} from "@/lib/authz";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDateTime, formatDateOnly } from "@/lib/format";
 import { PaymentEditor } from "@/components/PaymentEditor";
 import { VoidInvoiceButton } from "@/components/VoidInvoiceButton";
+import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
+import { EditInvoiceForm } from "@/components/EditInvoiceForm";
 
 function pickSingleRelation<T>(value: unknown): T | null {
   if (Array.isArray(value)) {
@@ -38,7 +45,7 @@ export default async function InvoiceDetailsPage({
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, created_at, customer_name, customer_phone, reference_number, subtotal, discount, total, paid_amount, remaining_amount, payment_status, status, created_by, voided_at, void_reason, profiles:created_by(full_name)"
+        "id, invoice_number, invoice_date, created_at, customer_name, customer_phone, reference_number, subtotal, discount, total, paid_amount, remaining_amount, payment_status, status, created_by, voided_at, void_reason, profiles:created_by(full_name)"
       )
       .eq("id", id)
       .single(),
@@ -61,16 +68,30 @@ export default async function InvoiceDetailsPage({
           <div>
             <h1>Invoice {invoice.invoice_number}</h1>
             <p className="page-subtitle">
-              Created {formatDateTime(invoice.created_at)}
+              {invoice.invoice_date
+                ? formatDateOnly(invoice.invoice_date)
+                : formatDateTime(invoice.created_at)}
+              {" · "}created {formatDateTime(invoice.created_at)}
             </p>
           </div>
-          <div className="status-stack">
-            <span className={paymentStatusClass(invoice.payment_status)}>
-              {invoice.payment_status}
-            </span>
-            <span className={invoiceStatusClass(invoice.status)}>
-              {invoice.status}
-            </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            {canEditInvoiceInfo(profile.role) && invoice.status === "confirmed" ? (
+              <EditInvoiceForm
+                invoiceId={invoice.id}
+                initialCustomerName={invoice.customer_name}
+                initialCustomerPhone={invoice.customer_phone}
+                initialReferenceNumber={invoice.reference_number}
+                initialInvoiceDate={invoice.invoice_date}
+              />
+            ) : null}
+            <div className="status-stack">
+              <span className={paymentStatusClass(invoice.payment_status)}>
+                {invoice.payment_status}
+              </span>
+              <span className={invoiceStatusClass(invoice.status)}>
+                {invoice.status}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -88,8 +109,12 @@ export default async function InvoiceDetailsPage({
             <div className="value">{invoice.customer_phone ?? "-"}</div>
           </div>
           <div className="summary-item">
-            <div className="label">Last Updated Status</div>
-            <div className="value">{invoice.status}</div>
+            <div className="label">Invoice Date</div>
+            <div className="value">
+              {invoice.invoice_date
+                ? formatDateOnly(invoice.invoice_date)
+                : formatDateTime(invoice.created_at)}
+            </div>
           </div>
           {invoice.reference_number ? (
             <div className="summary-item">
@@ -136,6 +161,12 @@ export default async function InvoiceDetailsPage({
               );
             })}
           </tbody>
+          <tfoot>
+            <tr className="totals-row">
+              <td colSpan={4} style={{ textAlign: "right", fontWeight: 600, color: "var(--text-muted)", fontSize: "0.88rem" }}>Total</td>
+              <td style={{ fontWeight: 700, color: "var(--text-strong)" }}>{formatCurrency(invoice.total)}</td>
+            </tr>
+          </tfoot>
           </table>
         </div>
       </section>
@@ -176,6 +207,10 @@ export default async function InvoiceDetailsPage({
 
       {canVoidInvoices(profile.role) && invoice.status === "confirmed" ? (
         <VoidInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoice_number} />
+      ) : null}
+
+      {canDeleteInvoices(profile.role) ? (
+        <DeleteInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoice_number} />
       ) : null}
     </div>
   );

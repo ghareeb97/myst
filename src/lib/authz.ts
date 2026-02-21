@@ -15,3 +15,11 @@ export function canVoidInvoices(role: Role): boolean {
 export function canEditInvoicePayments(role: Role): boolean {
   return role === "manager";
 }
+
+export function canDeleteInvoices(role: Role): boolean {
+  return role === "manager";
+}
+
+export function canEditInvoiceInfo(role: Role): boolean {
+  return role === "manager";
+}

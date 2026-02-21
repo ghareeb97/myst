@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
 import { useToast } from "@/components/Toast";
@@ -15,6 +15,16 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/products/categories")
+      .then((r) => r.json())
+      .then((d: { categories?: string[] }) => {
+        if (d.categories) setCategories(d.categories);
+      })
+      .catch(() => {});
+  }, []);
 
   const defaults = useMemo(
     () => ({
@@ -25,7 +35,9 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
       costPrice: initial?.cost_price?.toString() ?? "",
       currentStock: initial?.current_stock?.toString() ?? "0",
       lowStockThreshold: initial?.low_stock_threshold?.toString() ?? "",
-      status: (initial?.status ?? "active") as "active" | "inactive"
+      status: (initial?.status ?? "active") as "active" | "inactive",
+      isDigital: initial?.is_digital ?? false,
+      allowPriceOverride: initial?.allow_price_override ?? false
     }),
     [initial]
   );
@@ -40,6 +52,10 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
     defaults.lowStockThreshold
   );
   const [status, setStatus] = useState(defaults.status);
+  const [isDigital, setIsDigital] = useState(defaults.isDigital);
+  const [allowPriceOverride, setAllowPriceOverride] = useState(
+    defaults.allowPriceOverride
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,9 +68,11 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
         category: category || null,
         salePrice: Number(salePrice),
         costPrice: costPrice ? Number(costPrice) : null,
-        currentStock: Number(currentStock),
+        currentStock: isDigital ? 0 : Number(currentStock),
         lowStockThreshold: lowStockThreshold ? Number(lowStockThreshold) : null,
-        status
+        status,
+        isDigital,
+        allowPriceOverride
       };
 
       const endpoint =
@@ -112,9 +130,17 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
           <label htmlFor="category">Category</label>
           <input
             id="category"
+            list="category-list"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
+            placeholder="Select or type a new category"
+            autoComplete="off"
           />
+          <datalist id="category-list">
+            {categories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
         <div className="field">
           <label htmlFor="status">Status</label>
@@ -128,30 +154,72 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
           </select>
         </div>
       </div>
+
+      {/* Flags */}
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--space-6)",
+          flexWrap: "wrap",
+          padding: "var(--space-3) var(--space-4)",
+          background: "var(--surface-2)",
+          borderRadius: "var(--radius-sm)"
+        }}
+      >
+        <label
+          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+        >
+          <input
+            type="checkbox"
+            checked={isDigital}
+            onChange={(e) => setIsDigital(e.target.checked)}
+          />
+          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>
+            Digital (no stock)
+          </span>
+        </label>
+        <label
+          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+        >
+          <input
+            type="checkbox"
+            checked={allowPriceOverride}
+            onChange={(e) => setAllowPriceOverride(e.target.checked)}
+          />
+          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>
+            Allow price override on invoice
+          </span>
+        </label>
+      </div>
+
       <div className="grid cols-2">
         <div className="field">
-          <label htmlFor="salePrice">Sale Price</label>
+          <label htmlFor="salePrice">
+            {allowPriceOverride ? "Default Price (optional)" : "Sale Price"}
+          </label>
           <input
             id="salePrice"
             type="number"
             step="0.01"
             min="0"
-            required
+            required={!allowPriceOverride}
             value={salePrice}
             onChange={(e) => setSalePrice(e.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor="currentStock">Current Stock</label>
-          <input
-            id="currentStock"
-            type="number"
-            step="1"
-            value={currentStock}
-            onChange={(e) => setCurrentStock(e.target.value)}
-            required
-          />
-        </div>
+        {!isDigital && (
+          <div className="field">
+            <label htmlFor="currentStock">Current Stock</label>
+            <input
+              id="currentStock"
+              type="number"
+              step="1"
+              value={currentStock}
+              onChange={(e) => setCurrentStock(e.target.value)}
+              required
+            />
+          </div>
+        )}
       </div>
 
       <details className="form-advanced">
@@ -169,16 +237,18 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
                 onChange={(e) => setCostPrice(e.target.value)}
               />
             </div>
-            <div className="field">
-              <label htmlFor="threshold">Low Stock Threshold</label>
-              <input
-                id="threshold"
-                type="number"
-                step="1"
-                value={lowStockThreshold}
-                onChange={(e) => setLowStockThreshold(e.target.value)}
-              />
-            </div>
+            {!isDigital && (
+              <div className="field">
+                <label htmlFor="threshold">Low Stock Threshold</label>
+                <input
+                  id="threshold"
+                  type="number"
+                  step="1"
+                  value={lowStockThreshold}
+                  onChange={(e) => setLowStockThreshold(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
       </details>

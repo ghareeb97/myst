@@ -13,7 +13,9 @@ const productSchema = z.object({
   costPrice: z.number().min(0).nullable().optional(),
   currentStock: z.number().int(),
   lowStockThreshold: z.number().int().nullable().optional(),
-  status: z.enum(["active", "inactive"])
+  status: z.enum(["active", "inactive"]),
+  isDigital: z.boolean().optional(),
+  allowPriceOverride: z.boolean().optional()
 });
 
 export async function GET() {
@@ -65,6 +67,8 @@ export async function POST(request: Request) {
       current_stock: input.currentStock,
       low_stock_threshold: input.lowStockThreshold ?? null,
       status: input.status,
+      is_digital: input.isDigital ?? false,
+      allow_price_override: input.allowPriceOverride ?? false,
       created_by: auth.profile.id
     })
     .select("id")

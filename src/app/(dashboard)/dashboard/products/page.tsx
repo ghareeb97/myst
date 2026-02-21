@@ -17,7 +17,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   let query = supabase
     .from("products")
     .select(
-      "id, sku, name, category, sale_price, current_stock, low_stock_threshold, status"
+      "id, sku, name, category, sale_price, current_stock, low_stock_threshold, status, is_digital, allow_price_override"
     )
     .order("name", { ascending: true });
 
@@ -84,7 +84,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <td data-label="Name">{product.name}</td>
                 <td data-label="Price">{formatCurrency(product.sale_price)}</td>
                 <td data-label="Stock" className={product.current_stock < 0 ? "danger" : ""}>
-                  {product.current_stock}
+                  {product.is_digital ? "—" : product.current_stock}
                 </td>
                 <td data-label="Status">
                   <span
@@ -92,6 +92,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   >
                     {product.status}
                   </span>
+                  {product.is_digital ? (
+                    <span className="chip" style={{ marginLeft: 4 }}>digital</span>
+                  ) : null}
+                  {product.allow_price_override ? (
+                    <span className="chip" style={{ marginLeft: 4 }}>override</span>
+                  ) : null}
                 </td>
                 {canManage ? (
                   <td data-label="Actions">

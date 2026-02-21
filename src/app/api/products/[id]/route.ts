@@ -13,7 +13,9 @@ const updateSchema = z
     costPrice: z.number().min(0).nullable().optional(),
     currentStock: z.number().int().optional(),
     lowStockThreshold: z.number().int().nullable().optional(),
-    status: z.enum(["active", "inactive"]).optional()
+    status: z.enum(["active", "inactive"]).optional(),
+    isDigital: z.boolean().optional(),
+    allowPriceOverride: z.boolean().optional()
   })
   .refine((value) => Object.keys(value).length > 0, "No fields to update.");
 
@@ -50,6 +52,8 @@ export async function PATCH(request: Request, context: Context) {
     updateData.low_stock_threshold = input.lowStockThreshold;
   }
   if (input.status !== undefined) updateData.status = input.status;
+  if (input.isDigital !== undefined) updateData.is_digital = input.isDigital;
+  if (input.allowPriceOverride !== undefined) updateData.allow_price_override = input.allowPriceOverride;
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.from("products").update(updateData).eq("id", id);

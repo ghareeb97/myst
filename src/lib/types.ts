@@ -16,6 +16,8 @@ export type Product = {
   current_stock: number;
   low_stock_threshold: number | null;
   status: ProductStatus;
+  is_digital: boolean;
+  allow_price_override: boolean;
 };
 
 export type Profile = {
@@ -28,6 +30,7 @@ export type Profile = {
 export type Invoice = {
   id: string;
   invoice_number: string;
+  invoice_date: string | null;
   created_at: string;
   created_by: string;
   customer_name: string | null;

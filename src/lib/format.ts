@@ -15,3 +15,22 @@ export function formatDateTime(iso: string): string {
     timeZone: timezone
   }).format(new Date(iso));
 }
+
+export function formatDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium"
+  }).format(new Date(iso));
+}
+
+/** Format a date string (YYYY-MM-DD) for display */
+export function formatDateOnly(date: string): string {
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(
+    new Date(date + "T00:00:00")
+  );
+}
+
+/** Return today's date in YYYY-MM-DD format (Cairo timezone) */
+export function todayInCairo(): string {
+  const now = new Date();
+  return now.toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+}

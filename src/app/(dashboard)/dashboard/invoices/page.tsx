@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatCurrency, formatDateTime, formatDateOnly } from "@/lib/format";
 import { InvoiceFilters } from "@/components/InvoiceFilters";
 import type { InvoiceFilterValues } from "@/components/InvoiceFilters";
 
@@ -56,7 +56,7 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
   let query = supabase
     .from("invoices")
     .select(
-      "id, invoice_number, created_at, customer_name, reference_number, total, paid_amount, remaining_amount, payment_status, status, profiles:created_by(full_name)"
+      "id, invoice_number, invoice_date, created_at, customer_name, reference_number, total, paid_amount, remaining_amount, payment_status, status, profiles:created_by(full_name)"
     )
     .order("created_at", { ascending: false })
     .limit(300);
@@ -91,6 +91,10 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
   };
 
   const isFiltered = q || paymentStatus || invoiceStatus || from || to;
+
+  const totalSum = (invoices ?? []).reduce((s, i) => s + i.total, 0);
+  const paidSum = (invoices ?? []).reduce((s, i) => s + i.paid_amount, 0);
+  const remainingSum = (invoices ?? []).reduce((s, i) => s + i.remaining_amount, 0);
 
   return (
     <div className="page">
@@ -193,7 +197,11 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
                         {invoice.invoice_number}
                       </Link>
                     </td>
-                    <td data-label="Date">{formatDateTime(invoice.created_at)}</td>
+                    <td data-label="Date">
+                      {invoice.invoice_date
+                        ? formatDateOnly(invoice.invoice_date)
+                        : formatDateTime(invoice.created_at)}
+                    </td>
                     <td data-label="Customer">{invoice.customer_name ?? "-"}</td>
                     <td data-label="Ref #">{invoice.reference_number ?? "-"}</td>
                     <td data-label="Created By">{createdBy?.full_name ?? "-"}</td>
@@ -221,6 +229,33 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
                 </tr>
               ) : null}
             </tbody>
+            {(invoices?.length ?? 0) > 0 ? (
+              <tfoot>
+                <tr className="totals-row">
+                  <td
+                    colSpan={5}
+                    style={{
+                      fontWeight: 600,
+                      color: "var(--text-muted)",
+                      fontSize: "0.88rem",
+                      textAlign: "right"
+                    }}
+                  >
+                    {invoices?.length} invoice{invoices?.length !== 1 ? "s" : ""}
+                  </td>
+                  <td style={{ fontWeight: 700, color: "var(--text-strong)" }}>
+                    {formatCurrency(totalSum)}
+                  </td>
+                  <td style={{ fontWeight: 700, color: "var(--text-strong)" }}>
+                    {formatCurrency(paidSum)}
+                  </td>
+                  <td style={{ fontWeight: 700, color: "var(--text-strong)" }}>
+                    {formatCurrency(remainingSum)}
+                  </td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            ) : null}
           </table>
         </div>
       </section>

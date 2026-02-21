@@ -8,13 +8,15 @@ const createInvoiceSchema = z.object({
   customerName: z.string().trim().nullable().optional(),
   customerPhone: z.string().trim().nullable().optional(),
   referenceNumber: z.string().trim().nullable().optional(),
+  invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   discount: z.number().min(0).optional(),
   paidAmount: z.number().min(0).nullable().optional(),
   items: z
     .array(
       z.object({
         productId: z.string().uuid(),
-        quantity: z.number().int().positive()
+        quantity: z.number().int().positive(),
+        customPrice: z.number().min(0).optional()
       })
     )
     .min(1)
@@ -42,11 +44,13 @@ export async function POST(request: Request) {
     p_customer_name: parsed.data.customerName ?? null,
     p_customer_phone: parsed.data.customerPhone ?? null,
     p_reference_number: parsed.data.referenceNumber ?? null,
+    p_invoice_date: parsed.data.invoiceDate ?? null,
     p_discount: parsed.data.discount ?? 0,
     p_paid_amount: parsed.data.paidAmount ?? null,
     p_items: parsed.data.items.map((item) => ({
       product_id: item.productId,
-      quantity: item.quantity
+      quantity: item.quantity,
+      ...(item.customPrice !== undefined ? { custom_price: item.customPrice } : {})
     }))
   });
 
@@ -54,5 +58,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ id: data }, { status: 201 });
+  // Fetch invoice_number for display
+  const { data: inv } = await admin
+    .from("invoices")
+    .select("invoice_number")
+    .eq("id", data)
+    .single();
+
+  return NextResponse.json(
+    { id: data, invoice_number: inv?.invoice_number ?? null },
+    { status: 201 }
+  );
 }
