@@ -162,7 +162,7 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
                   display: "grid",
                   gridTemplateColumns: "1fr 90px 110px 40px",
                   gap: "var(--space-3)",
-                  alignItems: "end"
+                  alignItems: "start"
                 }}
               >
                 <div className="field" style={{ gap: 4 }}>
