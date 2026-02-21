@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Route } from "next";
 
 type DashboardNavProps = {
   variant: "sidebar" | "mobile";
@@ -37,7 +38,11 @@ const navItems = [
     label: "Low Stock",
     isActive: (pathname: string) => pathname.startsWith("/dashboard/low-stock")
   }
-];
+] as const satisfies ReadonlyArray<{
+  href: Route;
+  label: string;
+  isActive: (pathname: string) => boolean;
+}>;
 
 export function DashboardNav({ variant }: DashboardNavProps) {
   const pathname = usePathname();
