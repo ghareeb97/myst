@@ -10,6 +10,7 @@ import {
   IconInvoices,
   IconNewInvoice,
   IconLowStock,
+  IconReports,
 } from "@/components/Icons";
 
 type DashboardNavProps = {
@@ -50,6 +51,12 @@ const navItems = [
     label: "Low Stock",
     Icon: IconLowStock,
     isActive: (pathname: string) => pathname.startsWith("/dashboard/low-stock")
+  },
+  {
+    href: "/dashboard/reports",
+    label: "Reports",
+    Icon: IconReports,
+    isActive: (pathname: string) => pathname.startsWith("/dashboard/reports")
   }
 ] as const satisfies ReadonlyArray<{
   href: Route;

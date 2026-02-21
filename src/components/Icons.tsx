@@ -1,5 +1,27 @@
 import type { SVGProps } from "react";
 
+export function IconReports(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <rect x="1.5" y="9" width="3" height="5.5" rx="0.75" />
+      <rect x="6.5" y="5.5" width="3" height="9" rx="0.75" />
+      <rect x="11.5" y="1.5" width="3" height="13" rx="0.75" />
+    </svg>
+  );
+}
+
 export function IconDashboard(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

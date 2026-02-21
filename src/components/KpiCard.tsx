@@ -1,9 +1,13 @@
+import Link from "next/link";
+import type { Route } from "next";
+
 type KpiCardProps = {
   label: string;
   value: string;
   hint?: string;
   tone?: "accent" | "success" | "warning" | "danger";
   trend?: { direction: "up" | "down" | "flat"; label: string };
+  href?: Route;
 };
 
 const TREND_ICONS = { up: "↑", down: "↓", flat: "→" };
@@ -13,12 +17,14 @@ export function KpiCard({
   value,
   hint,
   tone = "accent",
-  trend
+  trend,
+  href
 }: KpiCardProps) {
-  const className = tone === "accent" ? "card kpi-card" : `card kpi-card ${tone}`;
+  const baseClass = tone === "accent" ? "card kpi-card" : `card kpi-card ${tone}`;
+  const className = href ? `${baseClass} kpi-card--link` : baseClass;
 
-  return (
-    <article className={className}>
+  const content = (
+    <>
       <div className="kpi-label">{label}</div>
       <div className="kpi-value">{value}</div>
       {trend ? (
@@ -28,6 +34,16 @@ export function KpiCard({
         </div>
       ) : null}
       {hint ? <div className="kpi-hint">{hint}</div> : null}
-    </article>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }

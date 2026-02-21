@@ -28,24 +28,28 @@ export default async function DashboardPage() {
           label="Invoices Today"
           value={String(metrics.invoices_today)}
           hint="Confirmed invoices created today"
+          href="/dashboard/invoices"
         />
         <KpiCard
           label="Invoices This Month"
           value={String(metrics.invoices_month)}
           hint="Confirmed invoices in current month"
           tone="success"
+          href="/dashboard/invoices"
         />
         <KpiCard
           label="Revenue Today"
           value={formatCurrency(metrics.revenue_today)}
           hint="Confirmed totals collected today"
           tone="warning"
+          href="/dashboard/reports"
         />
         <KpiCard
           label="Revenue This Month"
           value={formatCurrency(metrics.revenue_month)}
           hint="Confirmed totals collected this month"
           tone="accent"
+          href="/dashboard/reports"
         />
       </section>
 
