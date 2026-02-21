@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(cd \"C:\\\\Users\\\\moham\\\\OneDrive\\\\Documents\\\\Ghareeb\\\\Myst\\\\myst\" && npm run build 2>&1)"
+      "Bash(cd \"C:\\\\Users\\\\moham\\\\OneDrive\\\\Documents\\\\Ghareeb\\\\Myst\\\\myst\" && npm run build 2>&1)",
+      "Bash(cd /c/Users/moham/OneDrive/Documents/Ghareeb/Myst/myst && npm run build 2>&1)"
     ]
   }
 }
