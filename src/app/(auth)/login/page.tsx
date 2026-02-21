@@ -11,11 +11,24 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="container">
-      <section className="card" style={{ maxWidth: 460, margin: "20vh auto 0" }}>
-        <h1 style={{ marginTop: 0 }}>Myst Login</h1>
-        <p className="muted">Sign in to manage products, stock, and invoices.</p>
-        <LoginForm />
+    <main className="auth-shell">
+      <section className="auth-panel">
+        <article className="auth-hero reveal">
+          <h1>Myst Operations Console</h1>
+          <p className="muted">
+            Manage stock, products, and invoicing workflows from a single workspace
+            designed for daily sales operations.
+          </p>
+          <p className="muted">
+            Use your assigned account to continue. Contact your manager if your access
+            is locked.
+          </p>
+        </article>
+        <section className="card auth-card reveal">
+          <h2>Sign in</h2>
+          <p className="page-subtitle">Welcome back to Myst.</p>
+          <LoginForm />
+        </section>
       </section>
     </main>
   );

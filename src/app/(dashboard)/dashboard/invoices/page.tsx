@@ -9,6 +9,16 @@ function pickSingleRelation<T>(value: unknown): T | null {
   return (value as T | null) ?? null;
 }
 
+function paymentStatusClass(status: string) {
+  if (status === "paid") return "chip success";
+  if (status === "partially_paid") return "chip warning";
+  return "chip danger";
+}
+
+function invoiceStatusClass(status: string) {
+  return status === "confirmed" ? "chip accent" : "chip warning";
+}
+
 export default async function InvoicesPage() {
   const supabase = await createSupabaseServerClient();
 
@@ -29,18 +39,30 @@ export default async function InvoicesPage() {
   ]);
 
   return (
-    <div className="stack">
-      <section className="card" style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>Invoices</h1>
+    <div className="page">
+      <section className="page-head reveal">
+        <div>
+          <h1>Invoices</h1>
+          <p className="page-subtitle">
+            Track receivables and payment status across recent sales.
+          </p>
+        </div>
         <Link className="btn primary" href="/dashboard/invoices/new">
           New Invoice
         </Link>
       </section>
 
-      <section className="card stack">
-        <h2 style={{ margin: 0 }}>Receivables</h2>
+      <section className="card stack reveal">
+        <div className="page-head">
+          <div>
+            <h2>Receivables</h2>
+            <p className="page-subtitle">
+              <span className="chip warning">{receivables?.length ?? 0} open</span>
+            </p>
+          </div>
+        </div>
         <div className="table-wrap">
-          <table>
+          <table className="responsive-table">
             <thead>
               <tr>
                 <th>Invoice</th>
@@ -52,18 +74,26 @@ export default async function InvoicesPage() {
             <tbody>
               {(receivables ?? []).map((row) => (
                 <tr key={row.id}>
-                  <td>
+                  <td data-label="Invoice">
                     <Link href={`/dashboard/invoices/${row.id}`}>{row.invoice_number}</Link>
                   </td>
-                  <td>{row.customer_name ?? "-"}</td>
-                  <td>{row.payment_status}</td>
-                  <td>{formatCurrency(row.remaining_amount)}</td>
+                  <td data-label="Customer">{row.customer_name ?? "-"}</td>
+                  <td data-label="Status">
+                    <span className={paymentStatusClass(row.payment_status)}>
+                      {row.payment_status}
+                    </span>
+                  </td>
+                  <td data-label="Remaining">
+                    {formatCurrency(row.remaining_amount)}
+                  </td>
                 </tr>
               ))}
               {receivables?.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="muted">
-                    No unpaid or partially paid invoices.
+                    <div className="empty-state">
+                      No unpaid or partially paid invoices.
+                    </div>
                   </td>
                 </tr>
               ) : null}
@@ -72,8 +102,10 @@ export default async function InvoicesPage() {
         </div>
       </section>
 
-      <section className="card table-wrap">
-        <table>
+      <section className="card stack reveal">
+        <h2>Recent Invoices</h2>
+        <div className="table-wrap">
+          <table className="responsive-table">
           <thead>
             <tr>
               <th>No.</th>
@@ -95,31 +127,42 @@ export default async function InvoicesPage() {
 
               return (
                 <tr key={invoice.id}>
-                  <td>
+                  <td data-label="No.">
                     <Link href={`/dashboard/invoices/${invoice.id}`}>
                       {invoice.invoice_number}
                     </Link>
                   </td>
-                  <td>{formatDateTime(invoice.created_at)}</td>
-                  <td>{invoice.customer_name ?? "-"}</td>
-                  <td>{createdBy?.full_name ?? "-"}</td>
-                  <td>{formatCurrency(invoice.total)}</td>
-                  <td>{formatCurrency(invoice.paid_amount)}</td>
-                  <td>{formatCurrency(invoice.remaining_amount)}</td>
-                  <td>{invoice.payment_status}</td>
-                  <td>{invoice.status}</td>
+                  <td data-label="Date">{formatDateTime(invoice.created_at)}</td>
+                  <td data-label="Customer">{invoice.customer_name ?? "-"}</td>
+                  <td data-label="Created By">{createdBy?.full_name ?? "-"}</td>
+                  <td data-label="Total">{formatCurrency(invoice.total)}</td>
+                  <td data-label="Paid">{formatCurrency(invoice.paid_amount)}</td>
+                  <td data-label="Remaining">
+                    {formatCurrency(invoice.remaining_amount)}
+                  </td>
+                  <td data-label="Payment">
+                    <span className={paymentStatusClass(invoice.payment_status)}>
+                      {invoice.payment_status}
+                    </span>
+                  </td>
+                  <td data-label="Status">
+                    <span className={invoiceStatusClass(invoice.status)}>
+                      {invoice.status}
+                    </span>
+                  </td>
                 </tr>
               );
             })}
             {invoices?.length === 0 ? (
               <tr>
                 <td colSpan={9} className="muted">
-                  No invoices yet.
+                  <div className="empty-state">No invoices yet.</div>
                 </td>
               </tr>
             ) : null}
           </tbody>
-        </table>
+          </table>
+        </div>
       </section>
     </div>
   );

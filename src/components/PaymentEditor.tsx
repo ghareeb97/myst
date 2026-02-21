@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatCurrency } from "@/lib/format";
 
 type PaymentEditorProps = {
   invoiceId: string;
@@ -40,7 +41,10 @@ export function PaymentEditor({
 
   return (
     <div className="card stack">
-      <h3 style={{ margin: 0 }}>Update Payment</h3>
+      <h3>Update Payment</h3>
+      <p className="help-text">
+        Adjust paid amount up to the invoice total of {formatCurrency(total)}.
+      </p>
       <div className="field">
         <label htmlFor="paidAmountEdit">Paid Amount</label>
         <input
@@ -54,7 +58,7 @@ export function PaymentEditor({
         />
       </div>
       {error ? <p className="danger">{error}</p> : null}
-      <button className="btn primary" disabled={loading} onClick={save}>
+      <button className="btn primary" disabled={loading} onClick={save} type="button">
         {loading ? "Saving..." : "Save Payment"}
       </button>
     </div>

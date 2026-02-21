@@ -13,6 +13,16 @@ function pickSingleRelation<T>(value: unknown): T | null {
   return (value as T | null) ?? null;
 }
 
+function paymentStatusClass(status: string) {
+  if (status === "paid") return "chip success";
+  if (status === "partially_paid") return "chip warning";
+  return "chip danger";
+}
+
+function invoiceStatusClass(status: string) {
+  return status === "confirmed" ? "chip accent" : "chip warning";
+}
+
 type InvoiceDetailsPageProps = {
   params: Promise<{ id: string }>;
 };
@@ -45,36 +55,56 @@ export default async function InvoiceDetailsPage({
   const createdBy = pickSingleRelation<{ full_name?: string }>(invoice.profiles);
 
   return (
-    <div className="stack">
-      <section className="card stack">
-        <h1 style={{ margin: 0 }}>Invoice {invoice.invoice_number}</h1>
-        <div className="grid cols-2">
-          <p className="muted" style={{ margin: 0 }}>
-            Date: {formatDateTime(invoice.created_at)}
-          </p>
-          <p className="muted" style={{ margin: 0 }}>
-            Created by:{" "}
-            {createdBy?.full_name ?? "-"}
-          </p>
+    <div className="page">
+      <section className="card stack reveal">
+        <div className="page-head">
+          <div>
+            <h1>Invoice {invoice.invoice_number}</h1>
+            <p className="page-subtitle">
+              Created {formatDateTime(invoice.created_at)}
+            </p>
+          </div>
+          <div className="status-stack">
+            <span className={paymentStatusClass(invoice.payment_status)}>
+              {invoice.payment_status}
+            </span>
+            <span className={invoiceStatusClass(invoice.status)}>
+              {invoice.status}
+            </span>
+          </div>
         </div>
-        <div className="grid cols-2">
-          <p style={{ margin: 0 }}>Customer: {invoice.customer_name ?? "-"}</p>
-          <p style={{ margin: 0 }}>Phone: {invoice.customer_phone ?? "-"}</p>
+
+        <div className="summary-grid">
+          <div className="summary-item">
+            <div className="label">Created By</div>
+            <div className="value">{createdBy?.full_name ?? "-"}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Customer</div>
+            <div className="value">{invoice.customer_name ?? "-"}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Customer Phone</div>
+            <div className="value">{invoice.customer_phone ?? "-"}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Last Updated Status</div>
+            <div className="value">{invoice.status}</div>
+          </div>
         </div>
-        <div className="grid cols-2">
-          <p style={{ margin: 0 }}>Payment status: {invoice.payment_status}</p>
-          <p style={{ margin: 0 }}>Invoice status: {invoice.status}</p>
-        </div>
+
         {invoice.status === "void" ? (
-          <p className="danger" style={{ margin: 0 }}>
+          <p className="warning-banner">
             Voided at {invoice.voided_at ? formatDateTime(invoice.voided_at) : "-"}{" "}
             {invoice.void_reason ? `(${invoice.void_reason})` : ""}
           </p>
         ) : null}
       </section>
 
-      <section className="card table-wrap">
-        <table>
+      <section className="card stack reveal">
+        <h2>Line Items</h2>
+        <div className="table-wrap">
+          <table className="responsive-table">
           <thead>
             <tr>
               <th>Product</th>
@@ -91,27 +121,42 @@ export default async function InvoiceDetailsPage({
               );
               return (
                 <tr key={item.id}>
-                  <td>{product?.name ?? "-"}</td>
-                  <td>{product?.sku ?? "-"}</td>
-                  <td>{item.quantity}</td>
-                  <td>{formatCurrency(item.unit_price)}</td>
-                  <td>{formatCurrency(item.line_total)}</td>
+                  <td data-label="Product">{product?.name ?? "-"}</td>
+                  <td data-label="SKU">{product?.sku ?? "-"}</td>
+                  <td data-label="Qty">{item.quantity}</td>
+                  <td data-label="Unit Price">{formatCurrency(item.unit_price)}</td>
+                  <td data-label="Line Total">{formatCurrency(item.line_total)}</td>
                 </tr>
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
       </section>
 
-      <section className="card stack">
-        <div className="grid cols-2">
-          <p style={{ margin: 0 }}>Subtotal: {formatCurrency(invoice.subtotal)}</p>
-          <p style={{ margin: 0 }}>Discount: {formatCurrency(invoice.discount)}</p>
-          <p style={{ margin: 0 }}>Total: {formatCurrency(invoice.total)}</p>
-          <p style={{ margin: 0 }}>Paid: {formatCurrency(invoice.paid_amount)}</p>
-          <p style={{ margin: 0 }}>
-            Remaining: {formatCurrency(invoice.remaining_amount)}
-          </p>
+      <section className="card stack reveal">
+        <h2>Financial Summary</h2>
+        <div className="summary-grid">
+          <div className="summary-item">
+            <div className="label">Subtotal</div>
+            <div className="value">{formatCurrency(invoice.subtotal)}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Discount</div>
+            <div className="value">{formatCurrency(invoice.discount)}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Total</div>
+            <div className="value">{formatCurrency(invoice.total)}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Paid</div>
+            <div className="value">{formatCurrency(invoice.paid_amount)}</div>
+          </div>
+          <div className="summary-item">
+            <div className="label">Remaining</div>
+            <div className="value">{formatCurrency(invoice.remaining_amount)}</div>
+          </div>
         </div>
       </section>
 

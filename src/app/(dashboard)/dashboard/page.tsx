@@ -10,29 +10,59 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="stack">
-      <section className="grid cols-2">
-        <KpiCard label="Invoices Today" value={String(metrics.invoices_today)} />
-        <KpiCard label="Invoices This Month" value={String(metrics.invoices_month)} />
+    <div className="page">
+      <section className="page-head reveal">
+        <div>
+          <h1>Dashboard</h1>
+          <p className="page-subtitle">
+            Monitor invoices, revenue, and stock health in one place.
+          </p>
+        </div>
+        <Link className="btn primary" href="/dashboard/invoices/new">
+          New Invoice
+        </Link>
+      </section>
+
+      <section className="metric-grid stagger">
+        <KpiCard
+          label="Invoices Today"
+          value={String(metrics.invoices_today)}
+          hint="Confirmed invoices created today"
+        />
+        <KpiCard
+          label="Invoices This Month"
+          value={String(metrics.invoices_month)}
+          hint="Confirmed invoices in current month"
+          tone="success"
+        />
         <KpiCard
           label="Revenue Today"
           value={formatCurrency(metrics.revenue_today)}
+          hint="Confirmed totals collected today"
+          tone="warning"
         />
         <KpiCard
           label="Revenue This Month"
           value={formatCurrency(metrics.revenue_month)}
+          hint="Confirmed totals collected this month"
+          tone="accent"
         />
       </section>
 
-      <section className="card stack">
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-          <h2 style={{ margin: 0 }}>Low Stock Items ({lowStock.length})</h2>
+      <section className="card stack reveal">
+        <div className="page-head">
+          <div>
+            <h2>Low Stock Preview</h2>
+            <p className="page-subtitle">
+              <span className="chip warning">{lowStock.length} items</span>
+            </p>
+          </div>
           <Link className="btn" href="/dashboard/low-stock">
             View all
           </Link>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="responsive-table">
             <thead>
               <tr>
                 <th>SKU</th>
@@ -44,16 +74,16 @@ export default async function DashboardPage() {
             <tbody>
               {lowStock.slice(0, 5).map((item) => (
                 <tr key={item.id}>
-                  <td>{item.sku}</td>
-                  <td>{item.name}</td>
-                  <td>{item.current_stock}</td>
-                  <td>{item.threshold}</td>
+                  <td data-label="SKU">{item.sku}</td>
+                  <td data-label="Name">{item.name}</td>
+                  <td data-label="Stock">{item.current_stock}</td>
+                  <td data-label="Threshold">{item.threshold}</td>
                 </tr>
               ))}
               {lowStock.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="muted">
-                    No low stock items.
+                    <div className="empty-state">No low stock items.</div>
                   </td>
                 </tr>
               ) : null}

@@ -34,9 +34,18 @@ export function VoidInvoiceButton({ invoiceId }: { invoiceId: string }) {
   }
 
   return (
-    <div className="stack">
+    <div className="card stack">
+      <h3>Void Invoice</h3>
+      <p className="help-text">
+        This action will restore stock movements and mark the invoice as void.
+      </p>
       {error ? <p className="danger">{error}</p> : null}
-      <button className="btn danger" disabled={loading} onClick={handleVoid}>
+      <button
+        className="btn danger"
+        disabled={loading}
+        onClick={handleVoid}
+        type="button"
+      >
         {loading ? "Voiding..." : "Void Invoice"}
       </button>
     </div>
