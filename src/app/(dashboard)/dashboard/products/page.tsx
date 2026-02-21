@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { canManageProducts } from "@/lib/authz";
@@ -10,6 +11,7 @@ type ProductsPageProps = {
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const profile = await requireAuth();
+  if (!canManageProducts(profile.role)) redirect("/dashboard/invoices");
   const canManage = canManageProducts(profile.role);
   const { q } = await searchParams;
   const supabase = await createSupabaseServerClient();
@@ -17,7 +19,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   let query = supabase
     .from("products")
     .select(
-      "id, sku, name, category, sale_price, current_stock, low_stock_threshold, status, is_digital, allow_price_override"
+      "id, sku, name, category, sale_price, current_stock, low_stock_threshold, status, is_digital"
     )
     .order("name", { ascending: true });
 
@@ -94,9 +96,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   </span>
                   {product.is_digital ? (
                     <span className="chip" style={{ marginLeft: 4 }}>digital</span>
-                  ) : null}
-                  {product.allow_price_override ? (
-                    <span className="chip" style={{ marginLeft: 4 }}>override</span>
                   ) : null}
                 </td>
                 {canManage ? (

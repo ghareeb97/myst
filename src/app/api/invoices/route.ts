@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiUser } from "@/lib/apiAuth";
-import { canCreateInvoices } from "@/lib/authz";
+import { canCreateInvoices, canAddDiscount } from "@/lib/authz";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 const createInvoiceSchema = z.object({
@@ -37,6 +37,11 @@ export async function POST(request: Request) {
       { error: "Invalid payload", details: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+
+  // Block discount for roles that don't have permission
+  if ((parsed.data.discount ?? 0) > 0 && !canAddDiscount(auth.profile.role)) {
+    return NextResponse.json({ error: "Discount not allowed for your role." }, { status: 403 });
   }
 
   const admin = createSupabaseAdminClient();

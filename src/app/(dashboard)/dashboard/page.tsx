@@ -1,9 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
+import { canAccessManagerRoutes } from "@/lib/authz";
 import { getDashboardMetrics, getLowStockItems } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
 import { KpiCard } from "@/components/KpiCard";
 
 export default async function DashboardPage() {
+  const profile = await requireAuth();
+  if (!canAccessManagerRoutes(profile.role)) redirect("/dashboard/invoices");
   const [metrics, lowStock] = await Promise.all([
     getDashboardMetrics(),
     getLowStockItems()

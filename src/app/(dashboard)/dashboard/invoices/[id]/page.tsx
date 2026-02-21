@@ -1,10 +1,11 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import {
   canEditInvoicePayments,
   canVoidInvoices,
   canDeleteInvoices,
-  canEditInvoiceInfo
+  canEditInvoiceInfo,
+  getInvoiceDateBounds
 } from "@/lib/authz";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { formatCurrency, formatDateTime, formatDateOnly } from "@/lib/format";
@@ -57,6 +58,18 @@ export default async function InvoiceDetailsPage({
 
   if (!invoice) {
     notFound();
+  }
+
+  // Enforce date bounds: sales/supervisor cannot view invoices outside their window
+  const dateBounds = getInvoiceDateBounds(profile.role);
+  if (dateBounds !== null) {
+    const CAIRO_OFFSET = "+02:00";
+    const invoiceTs = invoice.created_at;
+    const fromTs = `${dateBounds.from}T00:00:00${CAIRO_OFFSET}`;
+    const toTs   = `${dateBounds.to}T23:59:59${CAIRO_OFFSET}`;
+    if (invoiceTs < fromTs || invoiceTs > toTs) {
+      redirect("/dashboard/invoices");
+    }
   }
 
   const createdBy = pickSingleRelation<{ full_name?: string }>(invoice.profiles);

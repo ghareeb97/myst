@@ -39,7 +39,7 @@ export async function requireAuth() {
 export async function requireRole(role: Role) {
   const profile = await requireAuth();
   if (profile.role !== role) {
-    redirect("/dashboard");
+    redirect("/dashboard/invoices");
   }
   return profile;
 }

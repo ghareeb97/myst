@@ -1,6 +1,12 @@
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
+import { canAccessManagerRoutes } from "@/lib/authz";
 import { getLowStockItems } from "@/lib/queries";
 
 export default async function LowStockPage() {
+  const profile = await requireAuth();
+  if (!canAccessManagerRoutes(profile.role)) redirect("/dashboard/invoices");
+
   const items = await getLowStockItems();
 
   return (

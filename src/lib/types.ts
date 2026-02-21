@@ -1,4 +1,4 @@
-export type Role = "manager" | "sales";
+export type Role = "manager" | "supervisor" | "sales";
 
 export type PaymentStatus = "paid" | "partially_paid" | "unpaid";
 
@@ -24,6 +24,7 @@ export type Profile = {
   full_name: string;
   role: Role;
   is_active: boolean;
+  email?: string;
 };
 
 export type Invoice = {

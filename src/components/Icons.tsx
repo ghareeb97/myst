@@ -116,6 +116,29 @@ export function IconNewInvoice(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconUsers(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <circle cx="6" cy="5" r="2.5" />
+      <path d="M1.5 14c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" />
+      <path d="M11 2.5a2.5 2.5 0 0 1 0 5" />
+      <path d="M14.5 14c0-2.485-1.567-4.5-3.5-4.5" />
+    </svg>
+  );
+}
+
 export function IconLowStock(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

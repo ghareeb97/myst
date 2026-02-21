@@ -15,6 +15,7 @@ type ProductOption = {
 
 type InvoiceFormProps = {
   products: ProductOption[];
+  canDiscount: boolean;
 };
 
 type LineItem = {
@@ -38,7 +39,7 @@ function resetForm(products: ProductOption[]) {
   };
 }
 
-export function InvoiceForm({ products }: InvoiceFormProps) {
+export function InvoiceForm({ products, canDiscount }: InvoiceFormProps) {
   const router = useRouter();
 
   const initial = resetForm(products);
@@ -435,22 +436,24 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
               />
             </div>
 
-            <details className="form-advanced">
-              <summary className="form-advanced__trigger">Add Discount</summary>
-              <div className="form-advanced__body">
-                <div className="field">
-                  <label htmlFor="discount">Discount</label>
-                  <input
-                    id="discount"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={discount}
-                    onChange={(e) => setDiscount(e.target.value)}
-                  />
+            {canDiscount ? (
+              <details className="form-advanced">
+                <summary className="form-advanced__trigger">Add Discount</summary>
+                <div className="form-advanced__body">
+                  <div className="field">
+                    <label htmlFor="discount">Discount</label>
+                    <input
+                      id="discount"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={discount}
+                      onChange={(e) => setDiscount(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
-            </details>
+              </details>
+            ) : null}
 
             <div className="card" style={{ padding: "12px 16px", display: "grid", gap: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-muted)" }}>

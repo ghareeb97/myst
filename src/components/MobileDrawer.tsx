@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { DashboardNav } from "@/components/DashboardNav";
 import { SignOutButton } from "@/components/SignOutButton";
+import type { Role } from "@/lib/types";
 
 type MobileDrawerProps = {
   fullName: string;
-  role: string;
+  role: Role;
 };
 
 export function MobileDrawer({ fullName, role }: MobileDrawerProps) {
@@ -67,7 +68,7 @@ export function MobileDrawer({ fullName, role }: MobileDrawerProps) {
           <div className="drawer-user-name">{fullName}</div>
           <span className="badge">{role}</span>
         </div>
-        <DashboardNav variant="drawer" onNavigate={close} />
+        <DashboardNav variant="drawer" role={role} onNavigate={close} />
         <div className="drawer-footer">
           <SignOutButton className="full-width" />
         </div>

@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth";
+import { canAccessManagerRoutes } from "@/lib/authz";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { ReportsClient } from "./ReportsClient";
 import type { SalesRow, BestSellerRow, ProfitSummary, MovementRow } from "./ReportsClient";
@@ -17,6 +20,9 @@ function monthBounds() {
 }
 
 export default async function ReportsPage() {
+  const profile = await requireAuth();
+  if (!canAccessManagerRoutes(profile.role)) redirect("/dashboard/invoices");
+
   const { from, to, displayFrom, displayTo } = monthBounds();
   const admin = createSupabaseAdminClient();
 

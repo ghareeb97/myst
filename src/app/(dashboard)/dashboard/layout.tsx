@@ -25,7 +25,7 @@ export default async function DashboardLayout({
           <div className="sidebar-user-name">{profile.full_name}</div>
           <span className="badge">{profile.role}</span>
         </div>
-        <DashboardNav variant="sidebar" />
+        <DashboardNav variant="sidebar" role={profile.role} />
         <div className="sidebar-footer">
           <SignOutButton className="full-width" />
         </div>

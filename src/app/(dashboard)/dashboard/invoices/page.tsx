@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { requireAuth } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { formatCurrency, formatDateTime, formatDateOnly } from "@/lib/format";
 import { InvoiceFilters } from "@/components/InvoiceFilters";
 import type { InvoiceFilterValues } from "@/components/InvoiceFilters";
+import { getInvoiceDateBounds, clampDate } from "@/lib/authz";
 
 // Cairo is UTC+2 year-round (no DST since 2011)
 const CAIRO_OFFSET = "+02:00";
@@ -34,23 +36,50 @@ type InvoicesPageProps = {
 };
 
 export default async function InvoicesPage({ searchParams }: InvoicesPageProps) {
+  const profile = await requireAuth();
   const sp = await searchParams;
-  const q              = sp.q?.trim() ?? "";
-  const paymentStatus  = sp.paymentStatus ?? "";
-  const invoiceStatus  = sp.invoiceStatus ?? "";
-  const from           = sp.from ?? "";
-  const to             = sp.to ?? "";
-  const preset         = sp.preset ?? "";
+  const q             = sp.q?.trim() ?? "";
+  const paymentStatus = sp.paymentStatus ?? "";
+  const invoiceStatus = sp.invoiceStatus ?? "";
+  const preset        = sp.preset ?? "";
+
+  // Enforce date bounds based on role
+  const dateBounds = getInvoiceDateBounds(profile.role);
+  let from: string;
+  let to: string;
+
+  if (dateBounds === null) {
+    // Manager: use URL params freely
+    from = sp.from ?? "";
+    to   = sp.to ?? "";
+  } else if (profile.role === "sales") {
+    // Sales: always locked to today only, ignore URL params
+    from = dateBounds.from;
+    to   = dateBounds.to;
+  } else {
+    // Supervisor: clamp URL params to allowed range (last 7 days → today)
+    from = clampDate(sp.from ?? dateBounds.from, dateBounds.from, "min");
+    to   = clampDate(sp.to ?? dateBounds.to, dateBounds.to, "max");
+  }
 
   const supabase = await createSupabaseServerClient();
 
-  // ── Receivables (always unfiltered) ──────────────────────
-  const { data: receivables } = await supabase
+  // ── Receivables (filtered by date bounds for non-managers) ──────────────
+  let receivablesQuery = supabase
     .from("invoices")
     .select("id, invoice_number, customer_name, remaining_amount, payment_status")
     .eq("status", "confirmed")
     .in("payment_status", ["unpaid", "partially_paid"])
     .order("created_at", { ascending: false });
+
+  if (from) {
+    receivablesQuery = receivablesQuery.gte("created_at", `${from}T00:00:00${CAIRO_OFFSET}`);
+  }
+  if (to) {
+    receivablesQuery = receivablesQuery.lte("created_at", `${to}T23:59:59${CAIRO_OFFSET}`);
+  }
+
+  const { data: receivables } = await receivablesQuery;
 
   // ── Main invoice query ────────────────────────────────────
   let query = supabase
@@ -90,11 +119,16 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
     preset,
   };
 
+  // For sales, filters are locked — don't show filter UI (or show read-only date)
   const isFiltered = q || paymentStatus || invoiceStatus || from || to;
 
-  const totalSum = (invoices ?? []).reduce((s, i) => s + i.total, 0);
-  const paidSum = (invoices ?? []).reduce((s, i) => s + i.paid_amount, 0);
+  const totalSum     = (invoices ?? []).reduce((s, i) => s + i.total, 0);
+  const paidSum      = (invoices ?? []).reduce((s, i) => s + i.paid_amount, 0);
   const remainingSum = (invoices ?? []).reduce((s, i) => s + i.remaining_amount, 0);
+
+  // "Today's Total" label for sales role
+  const isSales     = profile.role === "sales";
+  const isSupervisor = profile.role === "supervisor";
 
   return (
     <div className="page">
@@ -102,7 +136,11 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
         <div>
           <h1>Invoices</h1>
           <p className="page-subtitle">
-            Track receivables and payment status across recent sales.
+            {isSales
+              ? "Today's invoices."
+              : isSupervisor
+                ? "Invoices from the past 7 days."
+                : "Track receivables and payment status across recent sales."}
           </p>
         </div>
         <Link className="btn primary" href="/dashboard/invoices/new">
@@ -110,12 +148,49 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
         </Link>
       </section>
 
+      {/* Today's summary for sales */}
+      {isSales && (invoices?.length ?? 0) > 0 ? (
+        <section className="card reveal" style={{ padding: "1rem 1.25rem" }}>
+          <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+            <div>
+              <div className="muted" style={{ fontSize: "0.8rem", marginBottom: "0.2rem" }}>
+                Today&apos;s Total
+              </div>
+              <strong style={{ fontSize: "1.25rem" }}>{formatCurrency(totalSum)}</strong>
+            </div>
+            <div>
+              <div className="muted" style={{ fontSize: "0.8rem", marginBottom: "0.2rem" }}>
+                Collected
+              </div>
+              <strong style={{ fontSize: "1.25rem", color: "var(--success-500)" }}>
+                {formatCurrency(paidSum)}
+              </strong>
+            </div>
+            <div>
+              <div className="muted" style={{ fontSize: "0.8rem", marginBottom: "0.2rem" }}>
+                Outstanding
+              </div>
+              <strong style={{ fontSize: "1.25rem", color: "var(--danger-500)" }}>
+                {formatCurrency(remainingSum)}
+              </strong>
+            </div>
+            <div>
+              <div className="muted" style={{ fontSize: "0.8rem", marginBottom: "0.2rem" }}>
+                Invoices
+              </div>
+              <strong style={{ fontSize: "1.25rem" }}>{invoices?.length ?? 0}</strong>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="card stack reveal">
         <div className="page-head">
           <div>
             <h2>Receivables</h2>
             <p className="page-subtitle">
               <span className="chip warning">{receivables?.length ?? 0} open</span>
+              {isSales ? <span className="muted" style={{ marginLeft: "0.5rem", fontSize: "0.8rem" }}>today</span> : null}
             </p>
           </div>
         </div>
@@ -158,12 +233,17 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
         </div>
       </section>
 
-      <InvoiceFilters current={currentFilters} />
+      {/* Show filters only for supervisor/manager */}
+      {!isSales ? <InvoiceFilters current={currentFilters} /> : null}
 
       <section className="card stack reveal">
         <div className="page-head" style={{ alignItems: "center" }}>
           <h2>
-            {isFiltered ? "Filtered Invoices" : "All Invoices"}
+            {isSales
+              ? "Today's Invoices"
+              : isFiltered
+                ? "Filtered Invoices"
+                : "All Invoices"}
           </h2>
           <span className="muted" style={{ fontSize: "0.85rem" }}>
             {invoices?.length ?? 0} result{invoices?.length !== 1 ? "s" : ""}
