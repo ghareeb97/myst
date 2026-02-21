@@ -4,7 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { formatCurrency, formatDateTime, formatDateOnly } from "@/lib/format";
 import { InvoiceFilters } from "@/components/InvoiceFilters";
 import type { InvoiceFilterValues } from "@/components/InvoiceFilters";
-import { getInvoiceDateBounds, clampDate } from "@/lib/authz";
+import { getInvoiceDateBounds, clampDate, canEditInvoiceInfo } from "@/lib/authz";
+import { EditInvoiceForm } from "@/components/EditInvoiceForm";
 
 // Cairo is UTC+2 year-round (no DST since 2011)
 const CAIRO_OFFSET = "+02:00";
@@ -85,7 +86,7 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
   let query = supabase
     .from("invoices")
     .select(
-      "id, invoice_number, invoice_date, created_at, customer_name, reference_number, total, paid_amount, remaining_amount, payment_status, status, profiles:created_by(full_name)"
+      "id, invoice_number, invoice_date, created_at, customer_name, customer_phone, reference_number, total, paid_amount, remaining_amount, payment_status, status, profiles:created_by(full_name)"
     )
     .order("created_at", { ascending: false })
     .limit(300);
@@ -184,7 +185,7 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
         </section>
       ) : null}
 
-      <section className="card stack reveal">
+      {(receivables?.length ?? 0) > 0 ? <section className="card stack reveal">
         <div className="page-head">
           <div>
             <h2>Receivables</h2>
@@ -231,10 +232,10 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
             </tbody>
           </table>
         </div>
-      </section>
+      </section> : null}
 
       {/* Show filters only for supervisor/manager */}
-      {!isSales ? <InvoiceFilters current={currentFilters} /> : null}
+      <InvoiceFilters current={currentFilters} />
 
       <section className="card stack reveal">
         <div className="page-head" style={{ alignItems: "center" }}>
@@ -263,6 +264,7 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
                 <th>Remaining</th>
                 <th>Payment</th>
                 <th>Status</th>
+                {canEditInvoiceInfo(profile.role) ? <th></th> : null}
               </tr>
             </thead>
             <tbody>
@@ -298,12 +300,25 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
                         {invoice.status}
                       </span>
                     </td>
+                    {canEditInvoiceInfo(profile.role) && invoice.status === "confirmed" ? (
+                      <td>
+                        <EditInvoiceForm
+                          invoiceId={invoice.id}
+                          initialCustomerName={invoice.customer_name ?? null}
+                          initialCustomerPhone={invoice.customer_phone ?? null}
+                          initialReferenceNumber={invoice.reference_number ?? null}
+                          initialInvoiceDate={invoice.invoice_date ?? null}
+                        />
+                      </td>
+                    ) : canEditInvoiceInfo(profile.role) ? (
+                      <td />
+                    ) : null}
                   </tr>
                 );
               })}
               {invoices?.length === 0 ? (
                 <tr>
-                  <td colSpan={10}>
+                  <td colSpan={canEditInvoiceInfo(profile.role) ? 11 : 10}>
                     <div className="empty-state">No invoices match your filters.</div>
                   </td>
                 </tr>
@@ -332,7 +347,7 @@ export default async function InvoicesPage({ searchParams }: InvoicesPageProps) 
                   <td style={{ fontWeight: 700, color: "var(--text-strong)" }}>
                     {formatCurrency(remainingSum)}
                   </td>
-                  <td colSpan={2} />
+                  <td colSpan={canEditInvoiceInfo(profile.role) ? 3 : 2} />
                 </tr>
               </tfoot>
             ) : null}

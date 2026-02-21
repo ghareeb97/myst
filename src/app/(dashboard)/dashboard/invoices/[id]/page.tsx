@@ -42,7 +42,7 @@ export default async function InvoiceDetailsPage({
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: invoice }, { data: items }] = await Promise.all([
+  const [{ data: invoice }, { data: items }, { data: auditLog }] = await Promise.all([
     supabase
       .from("invoices")
       .select(
@@ -53,7 +53,12 @@ export default async function InvoiceDetailsPage({
     supabase
       .from("invoice_items")
       .select("id, quantity, unit_price, line_total, products:product_id(name, sku)")
+      .eq("invoice_id", id),
+    supabase
+      .from("invoice_audit_log")
+      .select("id, action, created_at, details, profiles:actor_id(full_name)")
       .eq("invoice_id", id)
+      .order("created_at", { ascending: false })
   ]);
 
   if (!invoice) {
@@ -236,6 +241,49 @@ export default async function InvoiceDetailsPage({
 
       {canDeleteInvoices(profile.role) ? (
         <DeleteInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoice_number} />
+      ) : null}
+
+      {(auditLog?.length ?? 0) > 0 ? (
+        <section className="card stack reveal">
+          <h2>Activity Log</h2>
+          <div className="table-wrap">
+            <table className="responsive-table">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>By</th>
+                  <th>When</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(auditLog ?? []).map((entry) => {
+                  const actor = pickSingleRelation<{ full_name?: string }>(entry.profiles);
+                  const details = entry.details as Record<string, string> | null;
+                  const detailParts: string[] = [];
+                  if (details?.customer_name) detailParts.push(`Name: ${details.customer_name}`);
+                  if (details?.customer_phone) detailParts.push(`Phone: ${details.customer_phone}`);
+                  if (details?.reference_number) detailParts.push(`Ref: ${details.reference_number}`);
+                  if (details?.invoice_date) detailParts.push(`Date: ${details.invoice_date}`);
+                  return (
+                    <tr key={entry.id}>
+                      <td data-label="Action">
+                        <span className="chip accent">
+                          {entry.action === "edit_info" ? "Info edited" : entry.action}
+                        </span>
+                      </td>
+                      <td data-label="By">{actor?.full_name ?? "-"}</td>
+                      <td data-label="When">{formatDateTime(entry.created_at)}</td>
+                      <td data-label="Details" className="muted" style={{ fontSize: "0.85rem" }}>
+                        {detailParts.length > 0 ? detailParts.join(" · ") : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
       ) : null}
     </div>
   );
