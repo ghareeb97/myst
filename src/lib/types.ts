@@ -17,7 +17,6 @@ export type Product = {
   low_stock_threshold: number | null;
   status: ProductStatus;
   is_digital: boolean;
-  allow_price_override: boolean;
 };
 
 export type Profile = {

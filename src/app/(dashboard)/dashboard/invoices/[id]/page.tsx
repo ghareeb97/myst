@@ -45,7 +45,7 @@ export default async function InvoiceDetailsPage({
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, invoice_date, created_at, customer_name, customer_phone, reference_number, subtotal, discount, total, paid_amount, remaining_amount, payment_status, status, created_by, voided_at, void_reason, profiles:created_by(full_name)"
+        "id, invoice_number, invoice_date, created_at, customer_name, customer_phone, reference_number, subtotal, discount, total, paid_amount, remaining_amount, payment_status, status, created_by, voided_at, void_reason, addon_qss, addon_ps, profiles:created_by(full_name)"
       )
       .eq("id", id)
       .single(),
@@ -178,6 +178,18 @@ export default async function InvoiceDetailsPage({
             <div className="label">Subtotal</div>
             <div className="value">{formatCurrency(invoice.subtotal)}</div>
           </div>
+          {invoice.addon_qss ? (
+            <div className="summary-item">
+              <div className="label">QSS</div>
+              <div className="value">{formatCurrency(invoice.addon_qss)}</div>
+            </div>
+          ) : null}
+          {invoice.addon_ps ? (
+            <div className="summary-item">
+              <div className="label">PS (Photoshop)</div>
+              <div className="value">{formatCurrency(invoice.addon_ps)}</div>
+            </div>
+          ) : null}
           <div className="summary-item">
             <div className="label">Discount</div>
             <div className="value">{formatCurrency(invoice.discount)}</div>

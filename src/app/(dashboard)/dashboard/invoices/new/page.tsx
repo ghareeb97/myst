@@ -8,7 +8,7 @@ export default async function NewInvoicePage() {
 
   const { data: products } = await supabase
     .from("products")
-    .select("id, name, sku, sale_price, current_stock, is_digital, allow_price_override")
+    .select("id, name, sku, sale_price, current_stock, is_digital")
     .eq("status", "active")
     .order("name", { ascending: true });
 

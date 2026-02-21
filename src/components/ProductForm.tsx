@@ -36,8 +36,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
       currentStock: initial?.current_stock?.toString() ?? "0",
       lowStockThreshold: initial?.low_stock_threshold?.toString() ?? "",
       status: (initial?.status ?? "active") as "active" | "inactive",
-      isDigital: initial?.is_digital ?? false,
-      allowPriceOverride: initial?.allow_price_override ?? false
+      isDigital: initial?.is_digital ?? false
     }),
     [initial]
   );
@@ -53,9 +52,6 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
   );
   const [status, setStatus] = useState(defaults.status);
   const [isDigital, setIsDigital] = useState(defaults.isDigital);
-  const [allowPriceOverride, setAllowPriceOverride] = useState(
-    defaults.allowPriceOverride
-  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,8 +67,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
         currentStock: isDigital ? 0 : Number(currentStock),
         lowStockThreshold: lowStockThreshold ? Number(lowStockThreshold) : null,
         status,
-        isDigital,
-        allowPriceOverride
+        isDigital
       };
 
       const endpoint =
@@ -94,7 +89,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
         router.replace("/dashboard/products");
       } else {
         toast.success("Product saved.");
-        router.refresh();
+        router.replace("/dashboard/products");
       }
     } catch (submitError) {
       setError(
@@ -178,31 +173,17 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
             Digital (no stock)
           </span>
         </label>
-        <label
-          style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-        >
-          <input
-            type="checkbox"
-            checked={allowPriceOverride}
-            onChange={(e) => setAllowPriceOverride(e.target.checked)}
-          />
-          <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>
-            Allow price override on invoice
-          </span>
-        </label>
       </div>
 
       <div className="grid cols-2">
         <div className="field">
-          <label htmlFor="salePrice">
-            {allowPriceOverride ? "Default Price (optional)" : "Sale Price"}
-          </label>
+          <label htmlFor="salePrice">Sale Price</label>
           <input
             id="salePrice"
             type="number"
             step="0.01"
             min="0"
-            required={!allowPriceOverride}
+            required
             value={salePrice}
             onChange={(e) => setSalePrice(e.target.value)}
           />

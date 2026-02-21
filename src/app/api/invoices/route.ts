@@ -11,12 +11,13 @@ const createInvoiceSchema = z.object({
   invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   discount: z.number().min(0).optional(),
   paidAmount: z.number().min(0).nullable().optional(),
+  addonQss: z.number().min(0).nullable().optional(),
+  addonPs: z.number().min(0).nullable().optional(),
   items: z
     .array(
       z.object({
         productId: z.string().uuid(),
-        quantity: z.number().int().positive(),
-        customPrice: z.number().min(0).optional()
+        quantity: z.number().int().positive()
       })
     )
     .min(1)
@@ -47,10 +48,11 @@ export async function POST(request: Request) {
     p_invoice_date: parsed.data.invoiceDate ?? null,
     p_discount: parsed.data.discount ?? 0,
     p_paid_amount: parsed.data.paidAmount ?? null,
+    p_addon_qss: parsed.data.addonQss ?? null,
+    p_addon_ps: parsed.data.addonPs ?? null,
     p_items: parsed.data.items.map((item) => ({
       product_id: item.productId,
-      quantity: item.quantity,
-      ...(item.customPrice !== undefined ? { custom_price: item.customPrice } : {})
+      quantity: item.quantity
     }))
   });
 
