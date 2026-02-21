@@ -2,6 +2,13 @@ import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 
+function pickSingleRelation<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] as T | undefined) ?? null;
+  }
+  return (value as T | null) ?? null;
+}
+
 export default async function InvoicesPage() {
   const supabase = await createSupabaseServerClient();
 
@@ -81,25 +88,29 @@ export default async function InvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {(invoices ?? []).map((invoice) => (
-              <tr key={invoice.id}>
-                <td>
-                  <Link href={`/dashboard/invoices/${invoice.id}`}>
-                    {invoice.invoice_number}
-                  </Link>
-                </td>
-                <td>{formatDateTime(invoice.created_at)}</td>
-                <td>{invoice.customer_name ?? "-"}</td>
-                <td>
-                  {(invoice.profiles as { full_name: string } | null)?.full_name ?? "-"}
-                </td>
-                <td>{formatCurrency(invoice.total)}</td>
-                <td>{formatCurrency(invoice.paid_amount)}</td>
-                <td>{formatCurrency(invoice.remaining_amount)}</td>
-                <td>{invoice.payment_status}</td>
-                <td>{invoice.status}</td>
-              </tr>
-            ))}
+            {(invoices ?? []).map((invoice) => {
+              const createdBy = pickSingleRelation<{ full_name?: string }>(
+                invoice.profiles
+              );
+
+              return (
+                <tr key={invoice.id}>
+                  <td>
+                    <Link href={`/dashboard/invoices/${invoice.id}`}>
+                      {invoice.invoice_number}
+                    </Link>
+                  </td>
+                  <td>{formatDateTime(invoice.created_at)}</td>
+                  <td>{invoice.customer_name ?? "-"}</td>
+                  <td>{createdBy?.full_name ?? "-"}</td>
+                  <td>{formatCurrency(invoice.total)}</td>
+                  <td>{formatCurrency(invoice.paid_amount)}</td>
+                  <td>{formatCurrency(invoice.remaining_amount)}</td>
+                  <td>{invoice.payment_status}</td>
+                  <td>{invoice.status}</td>
+                </tr>
+              );
+            })}
             {invoices?.length === 0 ? (
               <tr>
                 <td colSpan={9} className="muted">

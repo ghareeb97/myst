@@ -6,6 +6,13 @@ import { formatCurrency, formatDateTime } from "@/lib/format";
 import { PaymentEditor } from "@/components/PaymentEditor";
 import { VoidInvoiceButton } from "@/components/VoidInvoiceButton";
 
+function pickSingleRelation<T>(value: unknown): T | null {
+  if (Array.isArray(value)) {
+    return (value[0] as T | undefined) ?? null;
+  }
+  return (value as T | null) ?? null;
+}
+
 type InvoiceDetailsPageProps = {
   params: Promise<{ id: string }>;
 };
@@ -35,6 +42,8 @@ export default async function InvoiceDetailsPage({
     notFound();
   }
 
+  const createdBy = pickSingleRelation<{ full_name?: string }>(invoice.profiles);
+
   return (
     <div className="stack">
       <section className="card stack">
@@ -45,7 +54,7 @@ export default async function InvoiceDetailsPage({
           </p>
           <p className="muted" style={{ margin: 0 }}>
             Created by:{" "}
-            {(invoice.profiles as { full_name: string } | null)?.full_name ?? "-"}
+            {createdBy?.full_name ?? "-"}
           </p>
         </div>
         <div className="grid cols-2">
@@ -77,7 +86,9 @@ export default async function InvoiceDetailsPage({
           </thead>
           <tbody>
             {(items ?? []).map((item) => {
-              const product = item.products as { name: string; sku: string } | null;
+              const product = pickSingleRelation<{ name?: string; sku?: string }>(
+                item.products
+              );
               return (
                 <tr key={item.id}>
                   <td>{product?.name ?? "-"}</td>

@@ -23,7 +23,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
       costPrice: initial?.cost_price?.toString() ?? "",
       currentStock: initial?.current_stock?.toString() ?? "0",
       lowStockThreshold: initial?.low_stock_threshold?.toString() ?? "",
-      status: initial?.status ?? "active"
+      status: (initial?.status ?? "active") as "active" | "inactive"
     }),
     [initial]
   );
@@ -114,7 +114,7 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
           <select
             id="status"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => setStatus(e.target.value as "active" | "inactive")}
           >
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
