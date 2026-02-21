@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
+import { useToast } from "@/components/Toast";
 
 type ProductFormProps = {
   mode: "create" | "edit";
@@ -11,6 +12,7 @@ type ProductFormProps = {
 
 export function ProductForm({ mode, initial }: ProductFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +71,13 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
         throw new Error(data.error ?? "Failed to save product.");
       }
 
-      router.replace("/dashboard/products");
-      router.refresh();
+      if (mode === "create") {
+        toast.success("Product created.");
+        router.replace("/dashboard/products");
+      } else {
+        toast.success("Product saved.");
+        router.refresh();
+      }
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Unexpected error."
@@ -134,41 +141,48 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
             onChange={(e) => setSalePrice(e.target.value)}
           />
         </div>
-        <div className="field">
-          <label htmlFor="costPrice">Cost Price</label>
-          <input
-            id="costPrice"
-            type="number"
-            step="0.01"
-            min="0"
-            value={costPrice}
-            onChange={(e) => setCostPrice(e.target.value)}
-          />
-        </div>
       </div>
-      <div className="grid cols-2">
-        <div className="field">
-          <label htmlFor="currentStock">Current Stock</label>
-          <input
-            id="currentStock"
-            type="number"
-            step="1"
-            value={currentStock}
-            onChange={(e) => setCurrentStock(e.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="threshold">Low Stock Threshold</label>
-          <input
-            id="threshold"
-            type="number"
-            step="1"
-            value={lowStockThreshold}
-            onChange={(e) => setLowStockThreshold(e.target.value)}
-          />
-        </div>
+      <div className="field">
+        <label htmlFor="currentStock">Current Stock</label>
+        <input
+          id="currentStock"
+          type="number"
+          step="1"
+          value={currentStock}
+          onChange={(e) => setCurrentStock(e.target.value)}
+          required
+        />
       </div>
+
+      <details className="form-advanced">
+        <summary className="form-advanced__trigger">Advanced Settings</summary>
+        <div className="form-advanced__body">
+          <div className="grid cols-2">
+            <div className="field">
+              <label htmlFor="costPrice">Cost Price</label>
+              <input
+                id="costPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="threshold">Low Stock Threshold</label>
+              <input
+                id="threshold"
+                type="number"
+                step="1"
+                value={lowStockThreshold}
+                onChange={(e) => setLowStockThreshold(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      </details>
+
       {error ? <p className="danger">{error}</p> : null}
       <button className="btn primary" type="submit" disabled={loading}>
         {loading ? "Saving..." : mode === "create" ? "Create Product" : "Save"}

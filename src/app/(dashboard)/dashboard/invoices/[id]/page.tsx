@@ -169,7 +169,7 @@ export default async function InvoiceDetailsPage({
       ) : null}
 
       {canVoidInvoices(profile.role) && invoice.status === "confirmed" ? (
-        <VoidInvoiceButton invoiceId={invoice.id} />
+        <VoidInvoiceButton invoiceId={invoice.id} invoiceNumber={invoice.invoice_number} />
       ) : null}
     </div>
   );

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { requireAuth } from "@/lib/auth";
 import { DashboardNav } from "@/components/DashboardNav";
 import { SignOutButton } from "@/components/SignOutButton";
+import { ToastProvider } from "@/components/Toast";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,9 @@ export default async function DashboardLayout({
           </div>
           <DashboardNav variant="mobile" />
         </header>
-        <main className="container page-content">{children}</main>
+        <ToastProvider>
+          <main className="container page-content">{children}</main>
+        </ToastProvider>
       </div>
     </div>
   );

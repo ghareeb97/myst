@@ -31,6 +31,7 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
     { productId: products[0]?.id ?? "", quantity: 1 }
   ]);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const subtotal = useMemo(() => {
@@ -86,8 +87,11 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
         throw new Error(data.error ?? "Failed to create invoice.");
       }
 
-      router.replace(`/dashboard/invoices/${data.id}`);
-      router.refresh();
+      setSuccess(true);
+      setTimeout(() => {
+        router.replace(`/dashboard/invoices/${data.id}`);
+        router.refresh();
+      }, 500);
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : "Unexpected error."
@@ -118,96 +122,111 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
         </div>
       </div>
 
-      <div className="stack">
-        <h3 style={{ margin: 0 }}>Line Items</h3>
-        {items.map((item, index) => {
-          const product = products.find((p) => p.id === item.productId);
-          return (
-            <div className="grid cols-2" key={`${item.productId}-${index}`}>
-              <div className="field">
-                <label>Product</label>
-                <select
-                  value={item.productId}
-                  onChange={(e) => updateRow(index, { productId: e.target.value })}
-                  required
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) - {formatCurrency(p.sale_price)}
-                    </option>
-                  ))}
-                </select>
-                {product ? (
-                  <small className="muted">Current stock: {product.current_stock}</small>
+      <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+        <legend style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--text-strong)", marginBottom: 12 }}>
+          Line Items
+        </legend>
+        <div className="stack">
+          {items.map((item, index) => {
+            const product = products.find((p) => p.id === item.productId);
+            return (
+              <div className="grid cols-2" key={`${item.productId}-${index}`}>
+                <div className="field">
+                  <label>Product</label>
+                  <select
+                    value={item.productId}
+                    onChange={(e) => updateRow(index, { productId: e.target.value })}
+                    required
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.sku}) - {formatCurrency(p.sale_price)}
+                      </option>
+                    ))}
+                  </select>
+                  {product ? (
+                    <small className="muted">Current stock: {product.current_stock}</small>
+                  ) : null}
+                </div>
+                <div className="field">
+                  <label>Quantity</label>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateRow(index, { quantity: Number(e.target.value || 1) })
+                    }
+                    required
+                  />
+                </div>
+                {items.length > 1 ? (
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => removeRow(index)}
+                  >
+                    Remove row
+                  </button>
                 ) : null}
               </div>
+            );
+          })}
+          <button className="btn" type="button" onClick={addRow}>
+            Add product
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+        <legend style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--text-strong)", marginBottom: 12 }}>
+          Payment
+        </legend>
+        <div className="stack">
+          <div className="field">
+            <label htmlFor="paidAmount">Paid Amount (default full total)</label>
+            <input
+              id="paidAmount"
+              type="number"
+              min={0}
+              step="0.01"
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(e.target.value)}
+            />
+          </div>
+
+          <details className="form-advanced">
+            <summary className="form-advanced__trigger">Add Discount</summary>
+            <div className="form-advanced__body">
               <div className="field">
-                <label>Quantity</label>
+                <label htmlFor="discount">Discount</label>
                 <input
+                  id="discount"
                   type="number"
-                  min={1}
-                  step={1}
-                  value={item.quantity}
-                  onChange={(e) =>
-                    updateRow(index, { quantity: Number(e.target.value || 1) })
-                  }
-                  required
+                  min={0}
+                  step="0.01"
+                  value={discount}
+                  onChange={(e) => setDiscount(e.target.value)}
                 />
               </div>
-              {items.length > 1 ? (
-                <button
-                  className="btn"
-                  type="button"
-                  onClick={() => removeRow(index)}
-                >
-                  Remove row
-                </button>
-              ) : null}
             </div>
-          );
-        })}
-        <button className="btn" type="button" onClick={addRow}>
-          Add product
-        </button>
-      </div>
+          </details>
 
-      <div className="grid cols-2">
-        <div className="field">
-          <label htmlFor="discount">Discount</label>
-          <input
-            id="discount"
-            type="number"
-            min={0}
-            step="0.01"
-            value={discount}
-            onChange={(e) => setDiscount(e.target.value)}
-          />
+          <div className="card" style={{ padding: 10 }}>
+            <div className="muted">Subtotal: {formatCurrency(subtotal)}</div>
+            <div className="muted">Total: {formatCurrency(total)}</div>
+            <div className="muted">
+              Paid: {formatCurrency(Math.min(effectivePaidAmount, total))}
+            </div>
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor="paidAmount">Paid Amount (default full total)</label>
-          <input
-            id="paidAmount"
-            type="number"
-            min={0}
-            step="0.01"
-            value={paidAmount}
-            onChange={(e) => setPaidAmount(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: 10 }}>
-        <div className="muted">Subtotal: {formatCurrency(subtotal)}</div>
-        <div className="muted">Total: {formatCurrency(total)}</div>
-        <div className="muted">
-          Paid: {formatCurrency(Math.min(effectivePaidAmount, total))}
-        </div>
-      </div>
+      </fieldset>
 
       {error ? <p className="danger">{error}</p> : null}
 
-      <button className="btn primary" type="submit" disabled={loading}>
-        {loading ? "Saving..." : "Confirm Invoice"}
+      <button className="btn primary" type="submit" disabled={loading || success}>
+        {success ? "✓ Invoice Created" : loading ? "Saving..." : "Confirm Invoice"}
       </button>
     </form>
   );

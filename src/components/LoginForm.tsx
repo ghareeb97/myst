@@ -9,6 +9,7 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [welcomed, setWelcomed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -25,8 +26,11 @@ export function LoginForm() {
         setError(signInError.message);
         return;
       }
-      router.replace("/dashboard");
-      router.refresh();
+      setWelcomed(true);
+      setTimeout(() => {
+        router.replace("/dashboard");
+        router.refresh();
+      }, 500);
     } finally {
       setLoading(false);
     }
@@ -55,8 +59,8 @@ export function LoginForm() {
         />
       </div>
       {error ? <p className="danger">{error}</p> : null}
-      <button className="btn primary" disabled={loading} type="submit">
-        {loading ? "Signing in..." : "Sign in"}
+      <button className="btn primary" disabled={loading || welcomed} type="submit">
+        {welcomed ? "Welcome back!" : loading ? "Signing in..." : "Sign in"}
       </button>
     </form>
   );
