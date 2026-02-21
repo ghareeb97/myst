@@ -38,7 +38,7 @@ export default async function InvoiceDetailsPage({
     supabase
       .from("invoices")
       .select(
-        "id, invoice_number, created_at, customer_name, customer_phone, subtotal, discount, total, paid_amount, remaining_amount, payment_status, status, created_by, voided_at, void_reason, profiles:created_by(full_name)"
+        "id, invoice_number, created_at, customer_name, customer_phone, reference_number, subtotal, discount, total, paid_amount, remaining_amount, payment_status, status, created_by, voided_at, void_reason, profiles:created_by(full_name)"
       )
       .eq("id", id)
       .single(),
@@ -91,6 +91,12 @@ export default async function InvoiceDetailsPage({
             <div className="label">Last Updated Status</div>
             <div className="value">{invoice.status}</div>
           </div>
+          {invoice.reference_number ? (
+            <div className="summary-item">
+              <div className="label">Reference Number</div>
+              <div className="value">{invoice.reference_number}</div>
+            </div>
+          ) : null}
         </div>
 
         {invoice.status === "void" ? (

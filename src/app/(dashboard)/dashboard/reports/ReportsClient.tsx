@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import { DATE_PRESETS, getPresetRange } from "@/lib/datePresets";
 
 export type SalesRow = {
   day: string;
@@ -53,26 +54,26 @@ const TAB_LABELS: Record<Tab, string> = {
   "sales": "Sales",
   "best-sellers": "Best Sellers",
   "profit": "Net Profit",
-  "warehouse": "Warehouse"
+  "warehouse": "Warehouse",
 };
 
 const MOVEMENT_LABELS: Record<MovementRow["movement_type"], string> = {
   sale: "Sale",
   void_reversal: "Void Reversal",
-  adjustment: "Adjustment"
+  adjustment: "Adjustment",
 };
 
 const MOVEMENT_TONES: Record<MovementRow["movement_type"], string> = {
   sale: "danger",
   void_reversal: "success",
-  adjustment: "accent"
+  adjustment: "accent",
 };
 
 function formatDay(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
-    year: "numeric"
+    year: "numeric",
   });
 }
 
@@ -82,7 +83,7 @@ function formatTs(iso: string) {
     month: "short",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 
@@ -93,7 +94,7 @@ function SalesTab({ rows }: { rows: SalesRow[] }) {
     (acc, r) => ({
       invoices: acc.invoices + Number(r.invoice_count),
       revenue: acc.revenue + Number(r.revenue),
-      discount: acc.discount + Number(r.total_discount)
+      discount: acc.discount + Number(r.total_discount),
     }),
     { invoices: 0, revenue: 0, discount: 0 }
   );
@@ -125,10 +126,10 @@ function SalesTab({ rows }: { rows: SalesRow[] }) {
         </tbody>
         <tfoot>
           <tr className="totals-row">
-            <td><strong>Total</strong></td>
-            <td className="num"><strong>{totals.invoices}</strong></td>
-            <td className="num"><strong>{formatCurrency(totals.revenue)}</strong></td>
-            <td className="num"><strong>{formatCurrency(totals.discount)}</strong></td>
+            <td>Total</td>
+            <td className="num">{totals.invoices}</td>
+            <td className="num">{formatCurrency(totals.revenue)}</td>
+            <td className="num">{formatCurrency(totals.discount)}</td>
           </tr>
         </tfoot>
       </table>
@@ -189,9 +190,7 @@ function ProfitTab({ summary }: { summary: ProfitSummary | null }) {
         <div className="profit-label">Gross Profit</div>
         <div className="profit-value">{formatCurrency(Number(summary.gross_profit))}</div>
         {profitMargin ? (
-          <div className="profit-hint">
-            {profitMargin}% margin on costed items
-          </div>
+          <div className="profit-hint">{profitMargin}% margin on costed items</div>
         ) : null}
       </div>
       <div className="profit-card">
@@ -270,6 +269,7 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
   const [activeTab, setActiveTab] = useState<Tab>("sales");
   const [from, setFrom] = useState(initialData.defaultFrom);
   const [to, setTo] = useState(initialData.defaultTo);
+  const [activePreset, setActivePreset] = useState("");
   const [salesRows, setSalesRows] = useState(initialData.salesRows);
   const [bestSellers, setBestSellers] = useState(initialData.bestSellers);
   const [profit, setProfit] = useState<ProfitSummary | null>(initialData.profit);
@@ -277,13 +277,13 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleApply() {
-    if (!from || !to) return;
+  async function applyRange(fromDate: string, toDate: string) {
+    if (!fromDate || !toDate) return;
     setLoading(true);
     setError(null);
     try {
-      const fromTs = new Date(from + "T00:00:00Z").toISOString();
-      const toNext = new Date(to + "T00:00:00Z");
+      const fromTs = new Date(fromDate + "T00:00:00Z").toISOString();
+      const toNext = new Date(toDate + "T00:00:00Z");
       toNext.setUTCDate(toNext.getUTCDate() + 1);
       const toTs = toNext.toISOString();
 
@@ -291,7 +291,7 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
         fetch(`/api/reports/sales?from=${encodeURIComponent(fromTs)}&to=${encodeURIComponent(toTs)}`),
         fetch(`/api/reports/best-sellers?from=${encodeURIComponent(fromTs)}&to=${encodeURIComponent(toTs)}`),
         fetch(`/api/reports/profit?from=${encodeURIComponent(fromTs)}&to=${encodeURIComponent(toTs)}`),
-        fetch(`/api/reports/stock-movements?from=${encodeURIComponent(fromTs)}&to=${encodeURIComponent(toTs)}`)
+        fetch(`/api/reports/stock-movements?from=${encodeURIComponent(fromTs)}&to=${encodeURIComponent(toTs)}`),
       ]);
 
       if (!s.ok || !b.ok || !p.ok || !m.ok) {
@@ -310,6 +310,19 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
     }
   }
 
+  function handlePreset(id: string) {
+    const range = getPresetRange(id);
+    setFrom(range.from);
+    setTo(range.to);
+    setActivePreset(id);
+    applyRange(range.from, range.to);
+  }
+
+  function handleApply() {
+    setActivePreset("");
+    applyRange(from, to);
+  }
+
   return (
     <div className="page">
       <section className="page-head reveal">
@@ -320,6 +333,25 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
       </section>
 
       <div className="card report-filter reveal">
+        {/* Preset buttons */}
+        <div className="preset-btn-row" style={{ marginBottom: "var(--space-3)" }}>
+          <span className="preset-label">Quick:</span>
+          <div className="preset-btns">
+            {DATE_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`preset-btn${activePreset === p.id ? " active" : ""}`}
+                onClick={() => handlePreset(p.id)}
+                disabled={loading}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom date range */}
         <div className="report-filter-row">
           <label className="field">
             <span>From</span>
@@ -327,7 +359,7 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
               type="date"
               value={from}
               max={to}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => { setFrom(e.target.value); setActivePreset(""); }}
             />
           </label>
           <label className="field">
@@ -336,14 +368,14 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
               type="date"
               value={to}
               min={from}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => { setTo(e.target.value); setActivePreset(""); }}
             />
           </label>
-          <button className="btn primary" onClick={handleApply} disabled={loading}>
+          <button className="btn primary report-apply-btn" onClick={handleApply} disabled={loading}>
             {loading ? "Loading…" : "Apply"}
           </button>
         </div>
-        {error ? <p className="form-error">{error}</p> : null}
+        {error ? <p className="form-error" style={{ marginTop: "var(--space-2)" }}>{error}</p> : null}
       </div>
 
       <div className="report-tabs reveal">
@@ -360,10 +392,10 @@ export function ReportsClient({ initialData }: { initialData: InitialData }) {
       </div>
 
       <section className="card stack report-section reveal">
-        {activeTab === "sales" && <SalesTab rows={salesRows} />}
+        {activeTab === "sales"        && <SalesTab rows={salesRows} />}
         {activeTab === "best-sellers" && <BestSellersTab rows={bestSellers} />}
-        {activeTab === "profit" && <ProfitTab summary={profit} />}
-        {activeTab === "warehouse" && <WarehouseTab rows={movements} />}
+        {activeTab === "profit"       && <ProfitTab summary={profit} />}
+        {activeTab === "warehouse"    && <WarehouseTab rows={movements} />}
       </section>
     </div>
   );

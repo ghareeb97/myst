@@ -141,17 +141,17 @@ export function ProductForm({ mode, initial }: ProductFormProps) {
             onChange={(e) => setSalePrice(e.target.value)}
           />
         </div>
-      </div>
-      <div className="field">
-        <label htmlFor="currentStock">Current Stock</label>
-        <input
-          id="currentStock"
-          type="number"
-          step="1"
-          value={currentStock}
-          onChange={(e) => setCurrentStock(e.target.value)}
-          required
-        />
+        <div className="field">
+          <label htmlFor="currentStock">Current Stock</label>
+          <input
+            id="currentStock"
+            type="number"
+            step="1"
+            value={currentStock}
+            onChange={(e) => setCurrentStock(e.target.value)}
+            required
+          />
+        </div>
       </div>
 
       <details className="form-advanced">

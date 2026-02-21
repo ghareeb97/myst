@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 const createInvoiceSchema = z.object({
   customerName: z.string().trim().nullable().optional(),
   customerPhone: z.string().trim().nullable().optional(),
+  referenceNumber: z.string().trim().nullable().optional(),
   discount: z.number().min(0).optional(),
   paidAmount: z.number().min(0).nullable().optional(),
   items: z
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     p_created_by: auth.profile.id,
     p_customer_name: parsed.data.customerName ?? null,
     p_customer_phone: parsed.data.customerPhone ?? null,
+    p_reference_number: parsed.data.referenceNumber ?? null,
     p_discount: parsed.data.discount ?? 0,
     p_paid_amount: parsed.data.paidAmount ?? null,
     p_items: parsed.data.items.map((item) => ({

@@ -32,6 +32,7 @@ export type Invoice = {
   created_by: string;
   customer_name: string | null;
   customer_phone: string | null;
+  reference_number: string | null;
   subtotal: number;
   discount: number;
   total: number;

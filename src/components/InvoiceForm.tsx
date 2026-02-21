@@ -25,6 +25,7 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
   const router = useRouter();
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [discount, setDiscount] = useState("0");
   const [paidAmount, setPaidAmount] = useState("");
   const [items, setItems] = useState<LineItem[]>([
@@ -76,6 +77,7 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
         body: JSON.stringify({
           customerName: customerName || null,
           customerPhone: customerPhone || null,
+          referenceNumber: referenceNumber || null,
           discount: Number(discount || 0),
           paidAmount: paidAmount === "" ? null : Number(paidAmount),
           items: validItems
@@ -121,35 +123,66 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
           />
         </div>
       </div>
+      <div className="field">
+        <label htmlFor="referenceNumber">Reference Number (optional)</label>
+        <input
+          id="referenceNumber"
+          value={referenceNumber}
+          onChange={(e) => setReferenceNumber(e.target.value)}
+          placeholder="e.g. PO-1234, order ref, external ID"
+        />
+      </div>
 
       <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
         <legend style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--text-strong)", marginBottom: 12 }}>
           Line Items
         </legend>
         <div className="stack">
+          {/* Column headers */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 90px 110px 40px",
+            gap: "var(--space-3)",
+            paddingBottom: 4,
+            borderBottom: "1px solid var(--border-soft)"
+          }}>
+            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)" }}>Product</span>
+            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)" }}>Qty</span>
+            <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-muted)" }}>Total</span>
+            <span />
+          </div>
+
           {items.map((item, index) => {
             const product = products.find((p) => p.id === item.productId);
+            const lineTotal = product ? product.sale_price * item.quantity : 0;
             return (
-              <div className="grid cols-2" key={`${item.productId}-${index}`}>
-                <div className="field">
-                  <label>Product</label>
+              <div
+                key={`${item.productId}-${index}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 90px 110px 40px",
+                  gap: "var(--space-3)",
+                  alignItems: "end"
+                }}
+              >
+                <div className="field" style={{ gap: 4 }}>
                   <select
                     value={item.productId}
                     onChange={(e) => updateRow(index, { productId: e.target.value })}
                     required
+                    aria-label="Product"
                   >
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku}) - {formatCurrency(p.sale_price)}
+                        {p.name} ({p.sku}) — {formatCurrency(p.sale_price)}
                       </option>
                     ))}
                   </select>
                   {product ? (
-                    <small className="muted">Current stock: {product.current_stock}</small>
+                    <small className="muted">Stock: {product.current_stock}</small>
                   ) : null}
                 </div>
-                <div className="field">
-                  <label>Quantity</label>
+                <div className="field" style={{ gap: 4 }}>
                   <input
                     type="number"
                     min={1}
@@ -159,22 +192,27 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
                       updateRow(index, { quantity: Number(e.target.value || 1) })
                     }
                     required
+                    aria-label="Quantity"
                   />
                 </div>
-                {items.length > 1 ? (
-                  <button
-                    className="btn"
-                    type="button"
-                    onClick={() => removeRow(index)}
-                  >
-                    Remove row
-                  </button>
-                ) : null}
+                <div style={{ height: 42, display: "flex", alignItems: "center", fontSize: "0.9rem", fontWeight: 600, color: "var(--text-strong)" }}>
+                  {formatCurrency(lineTotal)}
+                </div>
+                <button
+                  className="btn sm"
+                  type="button"
+                  onClick={() => removeRow(index)}
+                  disabled={items.length === 1}
+                  aria-label="Remove row"
+                  style={{ padding: "0 10px", minHeight: 42, opacity: items.length === 1 ? 0.3 : 1 }}
+                >
+                  ×
+                </button>
               </div>
             );
           })}
-          <button className="btn" type="button" onClick={addRow}>
-            Add product
+          <button className="btn sm" type="button" onClick={addRow} style={{ alignSelf: "start" }}>
+            + Add product
           </button>
         </div>
       </fieldset>
@@ -213,11 +251,24 @@ export function InvoiceForm({ products }: InvoiceFormProps) {
             </div>
           </details>
 
-          <div className="card" style={{ padding: 10 }}>
-            <div className="muted">Subtotal: {formatCurrency(subtotal)}</div>
-            <div className="muted">Total: {formatCurrency(total)}</div>
-            <div className="muted">
-              Paid: {formatCurrency(Math.min(effectivePaidAmount, total))}
+          <div className="card" style={{ padding: "12px 16px", display: "grid", gap: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-muted)" }}>
+              <span>Subtotal</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            {Number(discount || 0) > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-muted)" }}>
+                <span>Discount</span>
+                <span>− {formatCurrency(Number(discount))}</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.95rem", fontWeight: 700, color: "var(--text-strong)", borderTop: "1px solid var(--border-soft)", paddingTop: 6 }}>
+              <span>Total</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem", color: "var(--text-muted)" }}>
+              <span>Paid</span>
+              <span>{formatCurrency(Math.min(effectivePaidAmount, total))}</span>
             </div>
           </div>
         </div>
