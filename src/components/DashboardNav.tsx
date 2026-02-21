@@ -14,7 +14,8 @@ import {
 } from "@/components/Icons";
 
 type DashboardNavProps = {
-  variant: "sidebar" | "mobile";
+  variant: "sidebar" | "mobile" | "drawer";
+  onNavigate?: () => void;
 };
 
 const navItems = [
@@ -65,10 +66,14 @@ const navItems = [
   isActive: (pathname: string) => boolean;
 }>;
 
-export function DashboardNav({ variant }: DashboardNavProps) {
+export function DashboardNav({ variant, onNavigate }: DashboardNavProps) {
   const pathname = usePathname();
-  const navClassName = variant === "sidebar" ? "sidebar-nav" : "mobile-nav";
-  const showIcons = variant === "sidebar";
+  const navClassName =
+    variant === "sidebar"
+      ? "sidebar-nav"
+      : variant === "drawer"
+        ? "drawer-nav"
+        : "mobile-nav";
 
   return (
     <nav className={navClassName} aria-label="Main">
@@ -78,8 +83,13 @@ export function DashboardNav({ variant }: DashboardNavProps) {
         const NavIcon = item.Icon;
 
         return (
-          <Link key={item.href} href={item.href} className={className}>
-            {showIcons ? <NavIcon /> : null}
+          <Link
+            key={item.href}
+            href={item.href}
+            className={className}
+            onClick={onNavigate}
+          >
+            <NavIcon />
             {item.label}
           </Link>
         );

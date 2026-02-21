@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { requireAuth } from "@/lib/auth";
 import { DashboardNav } from "@/components/DashboardNav";
 import { SignOutButton } from "@/components/SignOutButton";
+import { MobileDrawer } from "@/components/MobileDrawer";
 import { ToastProvider } from "@/components/Toast";
 
 export const dynamic = "force-dynamic";
@@ -31,18 +32,10 @@ export default async function DashboardLayout({
       </aside>
 
       <div>
-        <header className="mobile-header">
-          <div className="mobile-header-row">
-            <div>
-              <div className="mobile-brand">Myst</div>
-              <div className="muted caption">
-                {profile.full_name}
-              </div>
-            </div>
-            <SignOutButton className="sm" />
-          </div>
-          <DashboardNav variant="mobile" />
-        </header>
+        <MobileDrawer
+          fullName={profile.full_name}
+          role={profile.role}
+        />
         <ToastProvider>
           <main className="container page-content">{children}</main>
         </ToastProvider>
