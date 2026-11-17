@@ -13,12 +13,15 @@ import {
   IconLowStock,
   IconReports,
   IconUsers,
+  IconOrders,
 } from "@/components/Icons";
 
 type DashboardNavProps = {
   variant: "sidebar" | "mobile" | "drawer";
   role: Role;
   onNavigate?: () => void;
+  /** Number of online orders still in "new", shown as a badge on Online Orders. */
+  newOrders?: number;
 };
 
 type NavItem = {
@@ -55,6 +58,13 @@ const allNavItems: NavItem[] = [
         !pathname.endsWith("/new")),
   },
   {
+    href: "/dashboard/orders",
+    label: "Online Orders",
+    Icon: IconOrders,
+    isActive: (pathname: string) =>
+      pathname === "/dashboard/orders" || pathname.startsWith("/dashboard/orders/"),
+  },
+  {
     href: "/dashboard/invoices/new",
     label: "New Invoice",
     Icon: IconNewInvoice,
@@ -83,7 +93,7 @@ const allNavItems: NavItem[] = [
   },
 ];
 
-export function DashboardNav({ variant, role, onNavigate }: DashboardNavProps) {
+export function DashboardNav({ variant, role, onNavigate, newOrders = 0 }: DashboardNavProps) {
   const pathname = usePathname();
   const navClassName =
     variant === "sidebar"
@@ -112,6 +122,11 @@ export function DashboardNav({ variant, role, onNavigate }: DashboardNavProps) {
           >
             <NavIcon />
             {item.label}
+            {item.href === "/dashboard/orders" && newOrders > 0 ? (
+              <span className="nav-count" aria-label={`${newOrders} new`}>
+                {newOrders}
+              </span>
+            ) : null}
           </Link>
         );
       })}

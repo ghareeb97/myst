@@ -160,3 +160,25 @@ export function IconLowStock(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconOrders(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      <rect x="2" y="3.5" width="12" height="9" rx="1.25" />
+      <circle cx="6" cy="7" r="1.25" />
+      <path d="M14 10.5L10.5 7.5L5 12.5" />
+    </svg>
+  );
+}
