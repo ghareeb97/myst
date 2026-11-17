@@ -9,9 +9,10 @@ import type { Role } from "@/lib/types";
 type MobileDrawerProps = {
   fullName: string;
   role: Role;
+  newOrders?: number;
 };
 
-export function MobileDrawer({ fullName, role }: MobileDrawerProps) {
+export function MobileDrawer({ fullName, role, newOrders = 0 }: MobileDrawerProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -68,7 +69,7 @@ export function MobileDrawer({ fullName, role }: MobileDrawerProps) {
           <div className="drawer-user-name">{fullName}</div>
           <span className="badge">{role}</span>
         </div>
-        <DashboardNav variant="drawer" role={role} onNavigate={close} />
+        <DashboardNav variant="drawer" role={role} onNavigate={close} newOrders={newOrders} />
         <div className="drawer-footer">
           <SignOutButton className="full-width" />
         </div>

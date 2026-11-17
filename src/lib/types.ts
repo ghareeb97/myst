@@ -6,6 +6,35 @@ export type ProductStatus = "active" | "inactive";
 
 export type InvoiceStatus = "confirmed" | "void";
 
+export type OrderStatus = "new" | "in_progress" | "ready" | "delivered" | "cancelled";
+
+export type Order = {
+  id: string;
+  code: string;
+  customer_name: string;
+  customer_phone: string;
+  delivery_method: "pickup" | "delivery";
+  area: string | null;
+  address: string | null;
+  notes: string | null;
+  payment_method: "pay_at_pickup" | "cash_on_delivery";
+  status: OrderStatus;
+  total: number;
+  invoice_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrderItem = {
+  id: string;
+  size_cm: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  file_path: string;
+  file_name: string | null;
+};
+
 export type Product = {
   id: string;
   sku: string;

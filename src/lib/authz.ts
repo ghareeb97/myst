@@ -28,6 +28,16 @@ export function canAddDiscount(role: Role): boolean {
   return role === "manager" || role === "supervisor";
 }
 
+/** Online orders from the website: every active staff member can view and move them along. */
+export function canHandleOrders(role: Role): boolean {
+  return role === "manager" || role === "supervisor" || role === "sales";
+}
+
+/** Confirming an online order creates an invoice, so it follows canCreateInvoices. */
+export function canConfirmOrders(role: Role): boolean {
+  return canCreateInvoices(role);
+}
+
 export function canManageUsers(role: Role): boolean {
   return role === "manager";
 }

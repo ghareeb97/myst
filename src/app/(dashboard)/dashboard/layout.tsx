@@ -4,6 +4,7 @@ import { DashboardNav } from "@/components/DashboardNav";
 import { SignOutButton } from "@/components/SignOutButton";
 import { MobileDrawer } from "@/components/MobileDrawer";
 import { ToastProvider } from "@/components/Toast";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,11 @@ export default async function DashboardLayout({
   children: ReactNode;
 }) {
   const profile = await requireAuth();
+  const supabase = await createSupabaseServerClient();
+  const { count: newOrders } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
 
   return (
     <div className="dashboard-shell">
@@ -25,7 +31,7 @@ export default async function DashboardLayout({
           <div className="sidebar-user-name">{profile.full_name}</div>
           <span className="badge">{profile.role}</span>
         </div>
-        <DashboardNav variant="sidebar" role={profile.role} />
+        <DashboardNav variant="sidebar" role={profile.role} newOrders={newOrders ?? 0} />
         <div className="sidebar-footer">
           <SignOutButton className="full-width" />
         </div>
@@ -35,6 +41,7 @@ export default async function DashboardLayout({
         <MobileDrawer
           fullName={profile.full_name}
           role={profile.role}
+          newOrders={newOrders ?? 0}
         />
         <ToastProvider>
           <main className="container page-content">{children}</main>
