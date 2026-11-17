@@ -102,16 +102,19 @@ create table public.order_events (
 
 create index order_events_order_idx on public.order_events (order_id, created_at);
 
--- ── RLS: staff read, nobody writes directly (writes go through the RPCs) ─────────
+-- ── RLS: active staff read, nobody writes directly (writes go through the RPCs) ────
+-- "authenticated" alone is not enough: with public sign-up on, anyone holding the anon key
+-- (now shipped in the public website) could register and read customer names, phones and photos.
+-- current_user_role() is null unless the caller has an active row in profiles.
 alter table public.online_print_sizes enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.order_events enable row level security;
 
-create policy "online_print_sizes_read_authenticated" on public.online_print_sizes for select to authenticated using (true);
-create policy "orders_read_authenticated" on public.orders for select to authenticated using (true);
-create policy "order_items_read_authenticated" on public.order_items for select to authenticated using (true);
-create policy "order_events_read_authenticated" on public.order_events for select to authenticated using (true);
+create policy "online_print_sizes_read_staff" on public.online_print_sizes for select to authenticated using (public.current_user_role() is not null);
+create policy "orders_read_staff" on public.orders for select to authenticated using (public.current_user_role() is not null);
+create policy "order_items_read_staff" on public.order_items for select to authenticated using (public.current_user_role() is not null);
+create policy "order_events_read_staff" on public.order_events for select to authenticated using (public.current_user_role() is not null);
 
 revoke all on public.online_print_sizes, public.orders, public.order_items, public.order_events from anon;
 grant select on public.online_print_sizes, public.orders, public.order_items, public.order_events to authenticated;
@@ -137,7 +140,7 @@ with check (
 
 create policy "order_uploads_staff_read" on storage.objects
 for select to authenticated
-using (bucket_id = 'order-uploads');
+using (bucket_id = 'order-uploads' and public.current_user_role() is not null);
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 -- 8 characters from an alphabet without look-alikes (no 0/O, 1/I/L), e.g. MS-7KQ2XH9P.
@@ -462,7 +465,9 @@ grant execute on function public.online_print_prices() to anon, authenticated, s
 grant execute on function public.submit_order(uuid, text, text, text, text, text, text, jsonb) to anon, authenticated, service_role;
 grant execute on function public.order_status_public(text) to anon, authenticated, service_role;
 
-revoke execute on function public.update_order_status(uuid, public.order_status_enum, uuid) from public, anon;
-grant execute on function public.update_order_status(uuid, public.order_status_enum, uuid) to authenticated, service_role;
-revoke execute on function public.confirm_order_to_invoice(uuid, uuid, numeric) from public, anon;
-grant execute on function public.confirm_order_to_invoice(uuid, uuid, numeric) to authenticated, service_role;
+-- Staff RPCs take the acting profile id as an argument, so a logged-in caller could pass someone
+-- else's id. Only the myst API routes (service role, after requireApiUser + authz) may call them.
+revoke execute on function public.update_order_status(uuid, public.order_status_enum, uuid) from public, anon, authenticated;
+grant execute on function public.update_order_status(uuid, public.order_status_enum, uuid) to service_role;
+revoke execute on function public.confirm_order_to_invoice(uuid, uuid, numeric) from public, anon, authenticated;
+grant execute on function public.confirm_order_to_invoice(uuid, uuid, numeric) to service_role;
