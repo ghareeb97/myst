@@ -74,6 +74,12 @@ src/app/
     reports/dashboard/   # GET metrics
 ```
 
+### Online orders (from the public website, mystudio-web)
+- Migration `supabase/migrations/20261117200000_online_orders.sql`: tables `orders`, `order_items`, `order_events`, `online_print_sizes`; private Storage bucket `order-uploads`; 8 print products (`PRINT-10X15` … `PRINT-50X70`, `is_digital = true`, so no stock changes).
+- The website uses only the anon key and can call just three functions: `online_print_prices()`, `submit_order(...)`, `order_status_public(code)`. Anon may upload only to `order-uploads/pending/<uuid>/…`. The same migration revokes EXECUTE on every other function from `anon`/`PUBLIC`; new functions must grant `authenticated, service_role` explicitly.
+- Staff: `/dashboard/orders` (list, all roles) and `/dashboard/orders/[id]` (photos via signed URLs, zip download, status moves via `update_order_status`, "Confirm → invoice" via `confirm_order_to_invoice`, which calls `create_invoice` with the order code as reference number).
+- Local dev: `npx supabase start` (Docker) applies migrations and `seed.sql` (includes sample order `MS-SAMPLE23`); `.env.local` points at the local stack; `node --env-file=.env.local scripts/seed-users.mjs` creates the test staff logins.
+
 ### Key Business Rules
 - Stock can go negative (no hard floor)
 - Default low-stock threshold: 3 units (configurable per-product or via global `settings` table)
