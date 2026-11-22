@@ -78,6 +78,8 @@ src/app/
 - Migration `supabase/migrations/20261117200000_online_orders.sql`: tables `orders`, `order_items`, `order_events`, `online_print_sizes`; private Storage bucket `order-uploads`; 8 print products (`PRINT-10X15` … `PRINT-50X70`, `is_digital = true`, so no stock changes).
 - The website uses only the anon key and can call just three functions: `online_print_prices()`, `submit_order(...)`, `order_status_public(code)`. Anon may upload only to `order-uploads/pending/<uuid>/…`. The same migration revokes EXECUTE on every other function from `anon`/`PUBLIC`; new functions must grant `authenticated, service_role` explicitly.
 - Staff: `/dashboard/orders` (list, all roles) and `/dashboard/orders/[id]` (photos via signed URLs, zip download, status moves via `update_order_status`, "Confirm → invoice" via `confirm_order_to_invoice`, which calls `create_invoice` with the order code as reference number).
+- `20261122120000_online_orders_review_fixes.sql`: `submit_order` returns the existing code when an upload id is reused (a retry after a lost response), quantities must be whole numbers, phones accept Arabic-Indic digits, at most 100 files per upload folder, and `orphan_upload_paths()` (service role) lists uploads no order uses.
+- `/api/cron/cleanup-uploads` (daily via `vercel.json`, needs `CRON_SECRET`) deletes those orphan uploads after 24 hours through the Storage API. Direct SQL deletes on `storage.objects` are blocked by Supabase.
 - Local dev: `npx supabase start` (Docker) applies migrations and `seed.sql` (includes sample order `MS-SAMPLE23`); `.env.local` points at the local stack; `node --env-file=.env.local scripts/seed-users.mjs` creates the test staff logins.
 
 ### Key Business Rules

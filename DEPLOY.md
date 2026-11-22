@@ -17,6 +17,7 @@ Set these in Vercel Project Settings -> Environment Variables:
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
 | `APP_CURRENCY` | `EGP` |
 | `APP_TIMEZONE` | `Africa/Cairo` |
+| `CRON_SECRET` | Long random string. Vercel Cron sends it to `/api/cron/cleanup-uploads` (daily, see `vercel.json`), which deletes website uploads no order uses after 24 hours. Without it the route refuses to run. |
 
 ## 3) Apply Database Migration
 
