@@ -154,7 +154,10 @@ $$;
 
 -- ── 3. Cap uploads per folder ─────────────────────────────────────────────────
 -- An order has at most 100 photos, so an upload folder never needs more than 100 files.
--- The count runs as a definer function because anon cannot read storage.objects.
+-- The count runs as a definer function because anon cannot read storage.objects. It must stay
+-- executable by anon (the insert policy runs it as the uploading role), so it only answers for a
+-- UUID-shaped folder and matches by exact prefix (no LIKE wildcards): a caller can count only a
+-- folder whose random id it already knows, never the whole bucket.
 -- Note: this caps one folder, not one client; real per-client rate limiting needs signed upload
 -- URLs from a rate-limited server route (or a firewall rule) and is still open.
 create or replace function public.pending_upload_count(p_folder text)
@@ -164,10 +167,15 @@ stable
 security definer
 set search_path = public
 as $$
-  select count(*)::integer
-  from storage.objects o
-  where o.bucket_id = 'order-uploads'
-    and o.name like 'pending/' || p_folder || '/%';
+  select case
+    when p_folder !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then 0
+    else (
+      select count(*)::integer
+      from storage.objects o
+      where o.bucket_id = 'order-uploads'
+        and left(o.name, 45) = 'pending/' || p_folder || '/'
+    )
+  end;
 $$;
 
 revoke execute on function public.pending_upload_count(text) from public;
