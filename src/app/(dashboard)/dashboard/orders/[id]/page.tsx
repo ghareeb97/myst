@@ -7,6 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { nextStatuses, orderItemLabel, orderStatusChip, orderStatusLabel, summarizeOrderItems } from "@/lib/orders";
+import { CustomerMessages, type OutboxRow } from "@/components/CustomerMessages";
 import { OrderActions } from "@/components/OrderActions";
 import type { Order, OrderItem } from "@/lib/types";
 
@@ -24,7 +25,7 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: order }, { data: items }, { data: events }] = await Promise.all([
+  const [{ data: order }, { data: items }, { data: events }, { data: messages }] = await Promise.all([
     supabase
       .from("orders")
       .select(
@@ -43,6 +44,11 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
     supabase
       .from("order_events")
       .select("id, action, details, created_at, profiles:actor_id(full_name)")
+      .eq("order_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("whatsapp_outbox")
+      .select("id, event, to_phone, body, status, error, created_at, sent_at")
       .eq("order_id", id)
       .order("created_at", { ascending: false }),
   ]);
@@ -139,6 +145,8 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
           canConfirm={canConfirmOrders(profile.role) && !o.invoice_id && o.status !== "cancelled"}
         />
       ) : null}
+
+      <CustomerMessages rows={(messages ?? []) as OutboxRow[]} deliveryMethod={o.delivery_method} />
 
       <section className="card stack reveal">
         <div className="page-head" style={{ alignItems: "center" }}>

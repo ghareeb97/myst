@@ -18,6 +18,7 @@ Set these in Vercel Project Settings -> Environment Variables:
 | `APP_CURRENCY` | `EGP` |
 | `APP_TIMEZONE` | `Africa/Cairo` |
 | `CRON_SECRET` | Long random string. Vercel Cron sends it to `/api/cron/cleanup-uploads` (daily, see `vercel.json`), which deletes website uploads no order uses after 24 hours. Without it the route refuses to run. |
+| `WHATSAPP_PROVIDER` | Leave unset (or `log`) until a WhatsApp Business provider is set up: customer status messages are then stored and logged, not sent, and staff send them by hand from the order page. See `docs/WHATSAPP.md` for going live. |
 
 ## 3) Apply Database Migration
 
