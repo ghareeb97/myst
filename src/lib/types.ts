@@ -27,11 +27,18 @@ export type Order = {
 
 export type OrderItem = {
   id: string;
-  size_cm: string;
+  kind: "print" | "gift";
+  /** Print size; null for gifts. */
+  size_cm: string | null;
+  /** Website gift slug (online_gift_products); null for prints. */
+  gift_slug: string | null;
+  /** Name or phrase the customer wants on the gift. */
+  personal_text: string | null;
   quantity: number;
   unit_price: number;
   line_total: number;
-  file_path: string;
+  /** Uploaded photo; null for a name-only gift. */
+  file_path: string | null;
   file_name: string | null;
 };
 

@@ -108,7 +108,7 @@ export function OrderActions({ orderId, orderCode, total, deliveryMethod, nextSt
               </h2>
               <p className="help-text">
                 Creates a normal invoice with the order code as its reference number, priced from the current product
-                prices. Prints don&apos;t change stock.
+                prices. Prints and online gifts are digital products by default, so they don&apos;t change stock.
               </p>
             </div>
             <div className="field">

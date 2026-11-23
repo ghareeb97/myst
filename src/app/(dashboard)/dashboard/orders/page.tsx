@@ -3,7 +3,7 @@ import type { Route } from "next";
 import { requireAuth } from "@/lib/auth";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { ORDER_STATUSES, orderStatusChip, orderStatusLabel } from "@/lib/orders";
+import { ORDER_STATUSES, orderStatusChip, orderStatusLabel, summarizeOrderItems } from "@/lib/orders";
 import type { OrderStatus } from "@/lib/types";
 
 type OrdersPageProps = {
@@ -21,7 +21,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
   let query = supabase
     .from("orders")
     .select(
-      "id, code, customer_name, customer_phone, delivery_method, status, total, invoice_id, created_at, order_items(quantity)"
+      "id, code, customer_name, customer_phone, delivery_method, status, total, invoice_id, created_at, order_items(kind, quantity)"
     )
     .order("created_at", { ascending: false })
     .limit(300);
@@ -40,7 +40,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       <section className="page-head reveal">
         <div>
           <h1>Online Orders</h1>
-          <p className="page-subtitle">Print orders placed on the website. Newest first.</p>
+          <p className="page-subtitle">Print and gift orders placed on the website. Newest first.</p>
         </div>
       </section>
 
@@ -66,7 +66,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                 <th>Placed</th>
                 <th>Customer</th>
                 <th>Phone</th>
-                <th>Photos</th>
+                <th>Items</th>
                 <th>Total</th>
                 <th>Method</th>
                 <th>Status</th>
@@ -75,7 +75,6 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
             </thead>
             <tbody>
               {(orders ?? []).map((o) => {
-                const prints = (o.order_items ?? []).reduce((s: number, i: { quantity: number }) => s + i.quantity, 0);
                 return (
                   <tr key={o.id}>
                     <td data-label="Order">
@@ -86,9 +85,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
                     <td data-label="Phone">
                       <a href={`tel:${o.customer_phone}`}>{o.customer_phone}</a>
                     </td>
-                    <td data-label="Photos">
-                      {o.order_items?.length ?? 0} ({prints} prints)
-                    </td>
+                    <td data-label="Items">{summarizeOrderItems(o.order_items ?? [])}</td>
                     <td data-label="Total">{formatCurrency(o.total)}</td>
                     <td data-label="Method">{o.delivery_method === "delivery" ? "Delivery" : "Pickup"}</td>
                     <td data-label="Status">

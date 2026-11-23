@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Zip, ZipPassThrough } from "fflate";
 import { requireApiUser } from "@/lib/apiAuth";
 import { canHandleOrders } from "@/lib/authz";
-import { zipEntryName } from "@/lib/orders";
+import { zipEntryName, zipItemTag } from "@/lib/orders";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 type Context = {
@@ -10,7 +10,8 @@ type Context = {
 };
 
 /**
- * Streams every photo of an order as one zip. Files are stored, not recompressed (JPEGs don't shrink),
+ * Streams every photo of an order (prints and gift photos) as one zip, plus GIFT_TEXT.txt with the names
+ * or phrases customers want on their gifts. Files are stored, not recompressed (JPEGs don't shrink),
  * and downloaded one at a time so memory stays at roughly one photo.
  */
 export async function GET(_request: Request, context: Context) {
@@ -27,8 +28,9 @@ export async function GET(_request: Request, context: Context) {
     admin.from("orders").select("code").eq("id", id).single(),
     admin
       .from("order_items")
-      .select("size_cm, quantity, file_path, file_name")
+      .select("kind, size_cm, gift_slug, personal_text, quantity, file_path, file_name")
       .eq("order_id", id)
+      .order("line_no", { ascending: true, nullsFirst: false })
       .order("created_at")
   ]);
 
@@ -48,15 +50,27 @@ export async function GET(_request: Request, context: Context) {
       });
 
       const missing: string[] = [];
+      const giftText: string[] = [];
       for (const [index, item] of items.entries()) {
+        const tag = zipItemTag(item);
+        if (item.kind === "gift") {
+          giftText.push(`${String(index + 1).padStart(2, "0")}_${tag}_x${item.quantity}: ${item.personal_text ?? "(no text)"}${item.file_path ? "" : " (no photo)"}`);
+        }
+        if (!item.file_path) continue;
         const { data: blob } = await admin.storage.from("order-uploads").download(item.file_path);
         if (!blob) {
           missing.push(item.file_name ?? item.file_path);
           continue;
         }
-        const entry = new ZipPassThrough(zipEntryName(index, item.size_cm, item.quantity, item.file_name, item.file_path));
+        const entry = new ZipPassThrough(zipEntryName(index, tag, item.quantity, item.file_name, item.file_path));
         zip.add(entry);
         entry.push(new Uint8Array(await blob.arrayBuffer()), true);
+      }
+
+      if (giftText.length) {
+        const note = new ZipPassThrough("GIFT_TEXT.txt");
+        zip.add(note);
+        note.push(new TextEncoder().encode(`Text to put on each gift (line_item_xQty: text)\n${giftText.join("\n")}\n`), true);
       }
 
       if (missing.length) {
