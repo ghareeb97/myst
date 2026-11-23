@@ -42,3 +42,28 @@ export function zipEntryName(index: number, sizeCm: string, quantity: number, fi
   const base = (fileName ?? path.split("/").pop() ?? "photo").replace(/[\\/:*?"<>|]+/g, "_");
   return `${String(index + 1).padStart(2, "0")}_${sizeCm}_x${quantity}_${base}`;
 }
+
+type ItemCount = { kind?: "print" | "gift" | null; quantity: number };
+
+/** "3 photos (5 prints) · 2 gifts" for the orders list; kinds the order doesn't have are left out. */
+export function summarizeOrderItems(items: ItemCount[]): string {
+  const prints = items.filter((i) => (i.kind ?? "print") === "print");
+  const giftPieces = items.filter((i) => i.kind === "gift").reduce((s, i) => s + i.quantity, 0);
+  const parts: string[] = [];
+  if (prints.length || !giftPieces) {
+    const copies = prints.reduce((s, i) => s + i.quantity, 0);
+    parts.push(`${prints.length} ${prints.length === 1 ? "photo" : "photos"} (${copies} ${copies === 1 ? "print" : "prints"})`);
+  }
+  if (giftPieces) parts.push(`${giftPieces} ${giftPieces === 1 ? "gift" : "gifts"}`);
+  return parts.join(" · ");
+}
+
+/** What a line is, for staff: "Print 10 × 15 cm" or the gift's product name. */
+export function orderItemLabel(item: { kind?: "print" | "gift" | null; size_cm: string | null; gift_slug?: string | null }, productName?: string | null): string {
+  if (item.kind === "gift") return productName ?? item.gift_slug ?? "Gift";
+  return `Print ${(item.size_cm ?? "").replace("x", " × ")} cm`;
+}
+
+/** The middle part of a zip entry name: the print size, or gift-<slug> for gifts. */
+export const zipItemTag = (item: { kind?: "print" | "gift" | null; size_cm: string | null; gift_slug?: string | null }) =>
+  item.kind === "gift" ? `gift-${item.gift_slug ?? "item"}` : (item.size_cm ?? "print");
