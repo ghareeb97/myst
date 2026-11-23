@@ -46,6 +46,8 @@ Auth flow:
 
 Roles: `manager` | `sales`. Managers can manage products, void invoices, edit payments. Sales can create invoices.
 
+Database permissions (`20261122130000_harden_legacy_permissions.sql`): `anon` has no table access; `authenticated` has SELECT only, and RLS returns rows only to active staff (`current_user_role() is not null`; a user can also read their own profile row). Every write, every staff RPC (they take the acting profile id as an argument) and every report RPC is `service_role` only, so call them through `createSupabaseAdminClient()` after `requireAuth()`/`requireApiUser()` and the role check. New functions must grant `service_role` (plus `authenticated` only when the function checks the caller itself).
+
 ### Business Logic Lives in the Database
 
 Complex operations are PL/pgSQL functions in `supabase/migrations/20260220221500_init_mvp.sql`:
@@ -76,7 +78,7 @@ src/app/
 
 ### Online orders (from the public website, mystudio-web)
 - Migration `supabase/migrations/20261117200000_online_orders.sql`: tables `orders`, `order_items`, `order_events`, `online_print_sizes`; private Storage bucket `order-uploads`; 8 print products (`PRINT-10X15` … `PRINT-50X70`, `is_digital = true`, so no stock changes).
-- The website uses only the anon key and can call just three functions: `online_print_prices()`, `submit_order(...)`, `order_status_public(code)`. Anon may upload only to `order-uploads/pending/<uuid>/…`. The same migration revokes EXECUTE on every other function from `anon`/`PUBLIC`; new functions must grant `authenticated, service_role` explicitly.
+- The website uses only the anon key and can call just three functions: `online_print_prices()`, `submit_order(...)`, `order_status_public(code)`. Anon may upload only to `order-uploads/pending/<uuid>/…`. The same migration revokes EXECUTE on every other function from `anon`/`PUBLIC`; new functions must grant EXECUTE explicitly (see "Database permissions" above).
 - Staff: `/dashboard/orders` (list, all roles) and `/dashboard/orders/[id]` (photos via signed URLs, zip download, status moves via `update_order_status`, "Confirm → invoice" via `confirm_order_to_invoice`, which calls `create_invoice` with the order code as reference number).
 - `20261122120000_online_orders_review_fixes.sql`: `submit_order` returns the existing code when an upload id is reused (a retry after a lost response), quantities must be whole numbers, phones accept Arabic-Indic digits, at most 100 files per upload folder, and `orphan_upload_paths()` (service role) lists uploads no order uses.
 - `/api/cron/cleanup-uploads` (daily via `vercel.json`, needs `CRON_SECRET`) deletes those orphan uploads after 24 hours through the Storage API. Direct SQL deletes on `storage.objects` are blocked by Supabase.

@@ -1,7 +1,11 @@
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+
+// dashboard_metrics() and low_stock_items() are service-role only (they have no role check of
+// their own). Call these only from server pages that have already run requireAuth() and the
+// manager check.
 
 export async function getDashboardMetrics() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.rpc("dashboard_metrics");
   if (error) throw error;
   return (data?.[0] ?? {
@@ -20,7 +24,7 @@ export async function getDashboardMetrics() {
 }
 
 export async function getLowStockItems() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase.rpc("low_stock_items");
   if (error) throw error;
   return (data ?? []) as Array<{
