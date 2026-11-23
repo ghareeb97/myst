@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canConfirmOrders, canHandleOrders } from "@/lib/authz";
-import { nextStatuses, orderStatusLabel, zipEntryName } from "@/lib/orders";
+import { nextStatuses, orderItemLabel, orderStatusLabel, summarizeOrderItems, zipEntryName, zipItemTag } from "@/lib/orders";
 
 describe("online order rules", () => {
   it("moves forward only and allows cancel before delivery", () => {
@@ -26,5 +26,29 @@ describe("online order rules", () => {
       expect(canHandleOrders(role)).toBe(true);
       expect(canConfirmOrders(role)).toBe(true);
     }
+  });
+});
+
+describe("gift lines", () => {
+  it("summarizes prints and gifts for the list", () => {
+    expect(summarizeOrderItems([{ quantity: 2 }, { kind: "print", quantity: 1 }])).toBe("2 photos (3 prints)");
+    expect(summarizeOrderItems([{ kind: "print", quantity: 1 }])).toBe("1 photo (1 print)");
+    expect(
+      summarizeOrderItems([
+        { kind: "print", quantity: 2 },
+        { kind: "gift", quantity: 1 },
+        { kind: "gift", quantity: 2 },
+      ])
+    ).toBe("1 photo (2 prints) · 3 gifts");
+    expect(summarizeOrderItems([{ kind: "gift", quantity: 1 }])).toBe("1 gift");
+    expect(summarizeOrderItems([])).toBe("0 photos (0 prints)");
+  });
+
+  it("labels lines and tags zip entries", () => {
+    expect(orderItemLabel({ kind: "print", size_cm: "10x15" })).toBe("Print 10 × 15 cm");
+    expect(orderItemLabel({ kind: "gift", size_cm: null, gift_slug: "magic-mug" }, "Magic mug")).toBe("Magic mug");
+    expect(orderItemLabel({ kind: "gift", size_cm: null, gift_slug: "magic-mug" })).toBe("magic-mug");
+    expect(zipItemTag({ kind: "gift", size_cm: null, gift_slug: "magic-mug" })).toBe("gift-magic-mug");
+    expect(zipEntryName(0, zipItemTag({ kind: "print", size_cm: "10x15" }), 2, "a.jpg", "p")).toBe("01_10x15_x2_a.jpg");
   });
 });

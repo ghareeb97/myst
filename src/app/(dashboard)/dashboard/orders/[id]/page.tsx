@@ -6,7 +6,7 @@ import { canConfirmOrders, canHandleOrders } from "@/lib/authz";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { nextStatuses, orderStatusChip, orderStatusLabel } from "@/lib/orders";
+import { nextStatuses, orderItemLabel, orderStatusChip, orderStatusLabel, summarizeOrderItems } from "@/lib/orders";
 import { OrderActions } from "@/components/OrderActions";
 import type { Order, OrderItem } from "@/lib/types";
 
@@ -34,8 +34,11 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
       .single(),
     supabase
       .from("order_items")
-      .select("id, size_cm, quantity, unit_price, line_total, file_path, file_name")
+      .select(
+        "id, kind, size_cm, gift_slug, personal_text, quantity, unit_price, line_total, file_path, file_name, products:product_id(name)"
+      )
       .eq("order_id", id)
+      .order("line_no", { ascending: true, nullsFirst: false })
       .order("created_at"),
     supabase
       .from("order_events")
@@ -46,20 +49,18 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
 
   if (!order) notFound();
   const o = order as Order & { invoices: unknown };
-  const lines = (items ?? []) as OrderItem[];
+  const lines = (items ?? []) as (OrderItem & { products: unknown })[];
   const invoice = pickSingleRelation<{ invoice_number?: string }>(o.invoices);
 
   // Signed links are created with the service role so staff never need storage grants of their own.
   const admin = createSupabaseAdminClient();
-  const { data: signed } = lines.length
-    ? await admin.storage.from("order-uploads").createSignedUrls(
-        lines.map((l) => l.file_path),
-        600
-      )
+  const filePaths = lines.flatMap((l) => (l.file_path ? [l.file_path] : []));
+  const { data: signed } = filePaths.length
+    ? await admin.storage.from("order-uploads").createSignedUrls(filePaths, 600)
     : { data: [] };
   const urlByPath = new Map((signed ?? []).filter((s) => s.signedUrl).map((s) => [s.path, s.signedUrl]));
 
-  const prints = lines.reduce((s, l) => s + l.quantity, 0);
+  const hasGifts = lines.some((l) => l.kind === "gift");
 
   return (
     <div className="page">
@@ -141,12 +142,12 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
 
       <section className="card stack reveal">
         <div className="page-head" style={{ alignItems: "center" }}>
-          <h2>Photos</h2>
+          <h2>{hasGifts ? "Items" : "Photos"}</h2>
           <div className="order-actions">
             <span className="muted" style={{ fontSize: "0.85rem" }}>
-              {lines.length} photos · {prints} prints
+              {summarizeOrderItems(lines)}
             </span>
-            {lines.length ? (
+            {filePaths.length ? (
               <a className="btn sm" href={`/api/orders/${o.id}/zip`}>
                 Download all (zip)
               </a>
@@ -159,8 +160,9 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
               <tr>
                 <th>#</th>
                 <th>Photo</th>
-                <th>Size (cm)</th>
-                <th>Copies</th>
+                <th>Item</th>
+                {hasGifts ? <th>Text on gift</th> : null}
+                <th>{hasGifts ? "Qty" : "Copies"}</th>
                 <th>Unit</th>
                 <th>Line total</th>
                 <th>File</th>
@@ -168,7 +170,8 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
             </thead>
             <tbody>
               {lines.map((l, idx) => {
-                const url = urlByPath.get(l.file_path);
+                const url = l.file_path ? urlByPath.get(l.file_path) : undefined;
+                const product = pickSingleRelation<{ name?: string }>(l.products);
                 return (
                   <tr key={l.id}>
                     <td data-label="#">{idx + 1}</td>
@@ -177,11 +180,19 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
                         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not worth next/image config
                         <img className="order-thumb" src={url} alt={l.file_name ?? "Photo"} loading="lazy" />
                       ) : (
-                        <span className="muted">Missing file</span>
+                        <span className="muted">{l.file_path ? "Missing file" : "No photo"}</span>
                       )}
                     </td>
-                    <td data-label="Size (cm)">{l.size_cm.replace("x", " × ")}</td>
-                    <td data-label="Copies">{l.quantity}</td>
+                    <td data-label="Item">
+                      {l.kind === "gift" ? <span className="chip accent">Gift</span> : null}{" "}
+                      {orderItemLabel(l, product?.name)}
+                    </td>
+                    {hasGifts ? (
+                      <td data-label="Text on gift">
+                        {l.personal_text ? <strong dir="auto">{l.personal_text}</strong> : <span className="muted">-</span>}
+                      </td>
+                    ) : null}
+                    <td data-label={hasGifts ? "Qty" : "Copies"}>{l.quantity}</td>
                     <td data-label="Unit">{formatCurrency(l.unit_price)}</td>
                     <td data-label="Line total">{formatCurrency(l.line_total)}</td>
                     <td data-label="File">
@@ -209,7 +220,16 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
             const d = (e.details ?? {}) as Record<string, unknown>;
             const text =
               e.action === "created"
-                ? `Order placed on the website (${d.items} photos, ${formatCurrency(Number(d.total ?? 0))})`
+                ? `Order placed on the website (${
+                    d.gifts !== undefined
+                      ? [
+                          Number(d.prints) ? `${d.prints} ${Number(d.prints) === 1 ? "photo" : "photos"}` : null,
+                          Number(d.gifts) ? `${d.gifts} ${Number(d.gifts) === 1 ? "gift line" : "gift lines"}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(", ")
+                      : `${d.items} photos`
+                  }, ${formatCurrency(Number(d.total ?? 0))})`
                 : e.action === "status"
                   ? `Status: ${String(d.from)} → ${String(d.to)}`
                   : e.action === "invoiced"
