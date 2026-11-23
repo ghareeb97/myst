@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/apiAuth";
+import { canAccessManagerRoutes } from "@/lib/authz";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
 function monthBounds(): { from: string; to: string } {
@@ -12,6 +13,9 @@ function monthBounds(): { from: string; to: string } {
 export async function GET(req: NextRequest) {
   const auth = await requireApiUser();
   if (!auth.ok) return auth.response;
+  if (!canAccessManagerRoutes(auth.profile.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { searchParams } = req.nextUrl;
   const bounds = monthBounds();
