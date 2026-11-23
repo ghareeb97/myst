@@ -7,6 +7,8 @@ import { useToast } from "@/components/Toast";
 import { orderStatusLabel } from "@/lib/orders";
 import type { OrderStatus } from "@/lib/types";
 
+type PostResult = { error?: string; notification?: "none" | "duplicate" | "sent" | "logged" | "failed" };
+
 type OrderActionsProps = {
   orderId: string;
   orderCode: string;
@@ -24,7 +26,7 @@ export function OrderActions({ orderId, orderCode, total, deliveryMethod, nextSt
   const [paidInFull, setPaidInFull] = useState(true);
   const [paidAmount, setPaidAmount] = useState("0");
 
-  async function post(url: string, body: unknown, key: string, success: string) {
+  async function post(url: string, body: unknown, key: string, success: string | ((data: PostResult) => string)) {
     setBusy(key);
     try {
       const response = await fetch(url, {
@@ -32,9 +34,9 @@ export function OrderActions({ orderId, orderCode, total, deliveryMethod, nextSt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = (await response.json()) as { error?: string };
+      const data = (await response.json()) as PostResult;
       if (!response.ok) throw new Error(data.error ?? "Request failed.");
-      toast.success(success);
+      toast.success(typeof success === "function" ? success(data) : success);
       router.refresh();
       return true;
     } catch (err) {
@@ -47,7 +49,13 @@ export function OrderActions({ orderId, orderCode, total, deliveryMethod, nextSt
 
   async function changeStatus(status: OrderStatus) {
     if (status === "cancelled" && !window.confirm(`Cancel order ${orderCode}?`)) return;
-    await post(`/api/orders/${orderId}/status`, { status }, status, `${orderCode}: ${orderStatusLabel(status, deliveryMethod)}`);
+    await post(`/api/orders/${orderId}/status`, { status }, status, (data) => {
+      const saved = `${orderCode}: ${orderStatusLabel(status, deliveryMethod)}.`;
+      // Until a WhatsApp provider is connected, staff send the customer message by hand (Customer messages card).
+      if (data.notification === "logged") return `${saved} WhatsApp isn't connected yet: send the customer message below.`;
+      if (data.notification === "failed") return `${saved} The customer message wasn't sent: see Customer messages.`;
+      return saved;
+    });
   }
 
   async function confirmInvoice() {
