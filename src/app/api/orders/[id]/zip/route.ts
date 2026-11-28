@@ -14,6 +14,9 @@ import {
 import type { GiftDesign } from "@/lib/types";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
+/** Most bytes the zip keeps in memory for files that later lines use again. */
+const ZIP_CACHE_LIMIT_BYTES = 40 * 1024 * 1024;
+
 type Context = {
   params: Promise<{ id: string }>;
 };
@@ -62,10 +65,13 @@ export async function GET(_request: Request, context: Context) {
       const missing: string[] = [];
       const giftText: string[] = [];
 
-      // One photo can be printed in several sizes (one line each). Keep its bytes only until its last
-      // line, so each file is downloaded once and memory stays at roughly one photo.
+      // One photo can be printed in several sizes (one line each). Keep its bytes until its last line so
+      // it is downloaded once. The website sends a photo's sizes next to each other, so this is usually one
+      // photo; the cache is still capped, because line order comes from the customer: past the cap a file
+      // is simply downloaded again for its later lines.
       const usesLeft = countFileUses(items.map((item) => ({ file_path: item.file_path, design: item.design as GiftDesign | null })));
       const cache = new Map<string, Uint8Array | null>();
+      let cachedBytes = 0;
 
       const addFile = async (path: string, entryName: string, label: string) => {
         let bytes = cache.get(path);
@@ -75,8 +81,13 @@ export async function GET(_request: Request, context: Context) {
         }
         const left = (usesLeft.get(path) ?? 1) - 1;
         usesLeft.set(path, left);
-        if (left > 0) cache.set(path, bytes);
-        else cache.delete(path);
+        const size = bytes?.byteLength ?? 0;
+        if (left <= 0) {
+          if (cache.delete(path)) cachedBytes -= size;
+        } else if (!cache.has(path) && cachedBytes + size <= ZIP_CACHE_LIMIT_BYTES) {
+          cache.set(path, bytes);
+          cachedBytes += size;
+        }
 
         if (!bytes) {
           missing.push(label);
