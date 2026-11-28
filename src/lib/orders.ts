@@ -84,6 +84,18 @@ export function designPhotos(design: GiftDesign | null | undefined): GiftDesignP
   return [...(design?.photos ?? [])].sort((a, b) => a.slot - b.slot);
 }
 
+/** How many zip entries use each stored file (a print photo appears once per size; design originals count too). */
+export function countFileUses(items: { file_path: string | null; design?: GiftDesign | null }[]): Map<string, number> {
+  const uses = new Map<string, number>();
+  for (const item of items) {
+    if (!item.file_path) continue;
+    for (const path of [item.file_path, ...designPhotos(item.design).map((p) => p.path)]) {
+      uses.set(path, (uses.get(path) ?? 0) + 1);
+    }
+  }
+  return uses;
+}
+
 const safeName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, "_");
 const lineNo = (index: number) => String(index + 1).padStart(2, "0");
 

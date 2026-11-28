@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { Zip, ZipPassThrough } from "fflate";
 import { requireApiUser } from "@/lib/apiAuth";
 import { canHandleOrders } from "@/lib/authz";
-import { designPhotos, designSummary, zipDesignName, zipEntryName, zipItemTag, zipOriginalName } from "@/lib/orders";
+import {
+  countFileUses,
+  designPhotos,
+  designSummary,
+  zipDesignName,
+  zipEntryName,
+  zipItemTag,
+  zipOriginalName,
+} from "@/lib/orders";
 import type { GiftDesign } from "@/lib/types";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 
@@ -54,15 +62,29 @@ export async function GET(_request: Request, context: Context) {
       const missing: string[] = [];
       const giftText: string[] = [];
 
+      // One photo can be printed in several sizes (one line each). Keep its bytes only until its last
+      // line, so each file is downloaded once and memory stays at roughly one photo.
+      const usesLeft = countFileUses(items.map((item) => ({ file_path: item.file_path, design: item.design as GiftDesign | null })));
+      const cache = new Map<string, Uint8Array | null>();
+
       const addFile = async (path: string, entryName: string, label: string) => {
-        const { data: blob } = await admin.storage.from("order-uploads").download(path);
-        if (!blob) {
+        let bytes = cache.get(path);
+        if (bytes === undefined) {
+          const { data: blob } = await admin.storage.from("order-uploads").download(path);
+          bytes = blob ? new Uint8Array(await blob.arrayBuffer()) : null;
+        }
+        const left = (usesLeft.get(path) ?? 1) - 1;
+        usesLeft.set(path, left);
+        if (left > 0) cache.set(path, bytes);
+        else cache.delete(path);
+
+        if (!bytes) {
           missing.push(label);
           return;
         }
         const entry = new ZipPassThrough(entryName);
         zip.add(entry);
-        entry.push(new Uint8Array(await blob.arrayBuffer()), true);
+        entry.push(bytes, true);
       };
 
       for (const [index, item] of items.entries()) {

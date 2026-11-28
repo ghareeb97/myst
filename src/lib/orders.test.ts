@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canConfirmOrders, canHandleOrders } from "@/lib/authz";
 import {
+  countFileUses,
   designPhotos,
   designSummary,
   nextStatuses,
@@ -103,5 +104,37 @@ describe("gift designs", () => {
     expect(zipOriginalName(0, tag, 1, "beach.jpg", "pending/u/o-1.jpg")).toBe("01_gift-white-mug_original-2_beach.jpg");
     expect(zipOriginalName(0, tag, 0, null, "pending/u/o-0.jpg")).toBe("01_gift-white-mug_original-1_o-0.jpg");
     expect(zipOriginalName(0, tag, 3, "a\\b:c.jpg", "p")).toBe("01_gift-white-mug_original-4_a_b_c.jpg");
+  });
+});
+
+describe("one photo in several sizes", () => {
+  it("keeps each line's own zip name", () => {
+    expect(zipEntryName(0, "10x15", 2, "beach.jpg", "pending/u/beach.jpg")).toBe("01_10x15_x2_beach.jpg");
+    expect(zipEntryName(1, "20x30", 1, "beach.jpg", "pending/u/beach.jpg")).toBe("02_20x30_x1_beach.jpg");
+  });
+
+  it("counts how many zip entries use each file", () => {
+    const uses = countFileUses([
+      { file_path: "pending/u/beach.jpg" },
+      { file_path: "pending/u/beach.jpg" },
+      { file_path: null },
+      {
+        file_path: "pending/u/render.jpg",
+        design: {
+          v: 1,
+          template: "white-mug",
+          rev: 1,
+          layout: "duo",
+          photos: [0, 1].map((slot) => ({ slot, path: `pending/u/o-${slot}.jpg`, file_name: null, w: 1, h: 1, crop: { x: 0, y: 0, s: 1 } })),
+          text: null,
+        },
+      },
+    ]);
+    expect(Object.fromEntries(uses)).toEqual({
+      "pending/u/beach.jpg": 2,
+      "pending/u/render.jpg": 1,
+      "pending/u/o-0.jpg": 1,
+      "pending/u/o-1.jpg": 1,
+    });
   });
 });
