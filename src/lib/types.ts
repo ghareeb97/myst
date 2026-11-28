@@ -37,9 +37,31 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   line_total: number;
-  /** Uploaded photo; null for a name-only gift. */
+  /** Uploaded photo; null for a name-only gift. For a designed gift, the rendered print file. */
   file_path: string | null;
   file_name: string | null;
+  /** How the customer built the gift in the website's designer; null for prints and older gift lines. */
+  design: GiftDesign | null;
+};
+
+/** One original photo placed in a gift design (crop: x/y -1..1 pan, s 1..5 zoom). */
+export type GiftDesignPhoto = {
+  slot: number;
+  path: string;
+  file_name: string | null;
+  w: number;
+  h: number;
+  crop: { x: number; y: number; s: number };
+};
+
+/** order_items.design, as cleaned and stored by submit_order (clean_gift_design). */
+export type GiftDesign = {
+  v: 1;
+  template: string;
+  rev: number;
+  layout: string;
+  photos: GiftDesignPhoto[];
+  text: { font: "cairo" | "amiri" | "ruqaa"; color: string } | null;
 };
 
 export type Product = {
