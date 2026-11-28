@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@/lib/types";
+import type { GiftDesign, GiftDesignPhoto, OrderStatus } from "@/lib/types";
 
 export const ORDER_STATUSES: OrderStatus[] = ["new", "in_progress", "ready", "delivered", "cancelled"];
 
@@ -67,3 +67,46 @@ export function orderItemLabel(item: { kind?: "print" | "gift" | null; size_cm: 
 /** The middle part of a zip entry name: the print size, or gift-<slug> for gifts. */
 export const zipItemTag = (item: { kind?: "print" | "gift" | null; size_cm: string | null; gift_slug?: string | null }) =>
   item.kind === "gift" ? `gift-${item.gift_slug ?? "item"}` : (item.size_cm ?? "print");
+
+const FONT_LABELS: Record<string, string> = { cairo: "Cairo", amiri: "Amiri", ruqaa: "Ruqaa" };
+
+/** "quad · Amiri · #7d582b · white-mug r1": layout, text font and color (when there is text), template and revision. */
+export function designSummary(design: GiftDesign | null | undefined): string {
+  if (!design) return "";
+  const parts: string[] = [design.layout];
+  if (design.text) parts.push(FONT_LABELS[design.text.font] ?? design.text.font, design.text.color);
+  parts.push(`${design.template} r${design.rev}`);
+  return parts.join(" · ");
+}
+
+/** The customer's original photos in a design, in slot order. */
+export function designPhotos(design: GiftDesign | null | undefined): GiftDesignPhoto[] {
+  return [...(design?.photos ?? [])].sort((a, b) => a.slot - b.slot);
+}
+
+/** How many zip entries use each stored file (a print photo appears once per size; design originals count too). */
+export function countFileUses(items: { file_path: string | null; design?: GiftDesign | null }[]): Map<string, number> {
+  const uses = new Map<string, number>();
+  for (const item of items) {
+    if (!item.file_path) continue;
+    for (const path of [item.file_path, ...designPhotos(item.design).map((p) => p.path)]) {
+      uses.set(path, (uses.get(path) ?? 0) + 1);
+    }
+  }
+  return uses;
+}
+
+const safeName = (name: string) => name.replace(/[\\/:*?"<>|]+/g, "_");
+const lineNo = (index: number) => String(index + 1).padStart(2, "0");
+
+/** Zip entry for a designed gift's rendered print file: 01_gift-white-mug_x2_design.jpg. */
+export function zipDesignName(index: number, tag: string, quantity: number, path: string): string {
+  const ext = /\.([a-z0-9]{1,5})$/i.exec(path)?.[1]?.toLowerCase() ?? "jpg";
+  return `${lineNo(index)}_${tag}_x${quantity}_design.${ext}`;
+}
+
+/** Zip entry for an original photo of a design: 01_gift-white-mug_original-2_beach.jpg (K = slot + 1). */
+export function zipOriginalName(index: number, tag: string, slot: number, fileName: string | null, path: string): string {
+  const base = safeName(fileName ?? path.split("/").pop() ?? "photo");
+  return `${lineNo(index)}_${tag}_original-${slot + 1}_${base}`;
+}

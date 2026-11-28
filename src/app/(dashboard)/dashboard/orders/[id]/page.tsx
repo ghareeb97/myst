@@ -6,7 +6,15 @@ import { canConfirmOrders, canHandleOrders } from "@/lib/authz";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
 import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
 import { formatCurrency, formatDateTime } from "@/lib/format";
-import { nextStatuses, orderItemLabel, orderStatusChip, orderStatusLabel, summarizeOrderItems } from "@/lib/orders";
+import {
+  designPhotos,
+  designSummary,
+  nextStatuses,
+  orderItemLabel,
+  orderStatusChip,
+  orderStatusLabel,
+  summarizeOrderItems,
+} from "@/lib/orders";
 import { CustomerMessages, type OutboxRow } from "@/components/CustomerMessages";
 import { OrderActions } from "@/components/OrderActions";
 import type { Order, OrderItem } from "@/lib/types";
@@ -36,7 +44,7 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
     supabase
       .from("order_items")
       .select(
-        "id, kind, size_cm, gift_slug, personal_text, quantity, unit_price, line_total, file_path, file_name, products:product_id(name)"
+        "id, kind, size_cm, gift_slug, personal_text, quantity, unit_price, line_total, file_path, file_name, design, products:product_id(name)"
       )
       .eq("order_id", id)
       .order("line_no", { ascending: true, nullsFirst: false })
@@ -60,7 +68,11 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
 
   // Signed links are created with the service role so staff never need storage grants of their own.
   const admin = createSupabaseAdminClient();
-  const filePaths = lines.flatMap((l) => (l.file_path ? [l.file_path] : []));
+  // Every file: the line's photo (or a designed gift's print file) plus the design's original photos.
+  const filePaths = lines.flatMap((l) => [
+    ...(l.file_path ? [l.file_path] : []),
+    ...designPhotos(l.design).map((p) => p.path),
+  ]);
   const { data: signed } = filePaths.length
     ? await admin.storage.from("order-uploads").createSignedUrls(filePaths, 600)
     : { data: [] };
@@ -186,7 +198,7 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
                     <td data-label="Photo">
                       {url ? (
                         // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not worth next/image config
-                        <img className="order-thumb" src={url} alt={l.file_name ?? "Photo"} loading="lazy" />
+                        <img className="order-thumb" src={url} alt={l.design ? "Print file" : l.file_name ?? "Photo"} loading="lazy" />
                       ) : (
                         <span className="muted">{l.file_path ? "Missing file" : "No photo"}</span>
                       )}
@@ -194,6 +206,11 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
                     <td data-label="Item">
                       {l.kind === "gift" ? <span className="chip accent">Gift</span> : null}{" "}
                       {orderItemLabel(l, product?.name)}
+                      {l.design ? (
+                        <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>
+                          Design: {designSummary(l.design)}
+                        </span>
+                      ) : null}
                     </td>
                     {hasGifts ? (
                       <td data-label="Text on gift">
@@ -204,7 +221,38 @@ export default async function OrderDetailsPage({ params }: OrderPageProps) {
                     <td data-label="Unit">{formatCurrency(l.unit_price)}</td>
                     <td data-label="Line total">{formatCurrency(l.line_total)}</td>
                     <td data-label="File">
-                      {url ? (
+                      {l.design ? (
+                        // Designed gift: file_path is the print-ready render; the originals come from the design.
+                        <span className="stack" style={{ gap: 4 }}>
+                          {url ? (
+                            <a href={url} download={l.file_name ?? undefined} target="_blank" rel="noopener noreferrer">
+                              <strong>Print file</strong>
+                            </a>
+                          ) : (
+                            <span className="muted">Print file missing</span>
+                          )}
+                          {designPhotos(l.design).map((p) => {
+                            const originalUrl = urlByPath.get(p.path);
+                            const label = `Original ${p.slot + 1}`;
+                            return originalUrl ? (
+                              <a
+                                key={p.path}
+                                href={originalUrl}
+                                download={p.file_name ?? undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={p.file_name ?? undefined}
+                              >
+                                {label}
+                              </a>
+                            ) : (
+                              <span key={p.path} className="muted">
+                                {label} missing
+                              </span>
+                            );
+                          })}
+                        </span>
+                      ) : url ? (
                         <a href={url} download={l.file_name ?? undefined} target="_blank" rel="noopener noreferrer">
                           {l.file_name ?? "Download"}
                         </a>
